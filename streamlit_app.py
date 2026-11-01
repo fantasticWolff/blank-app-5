@@ -985,6 +985,17 @@ def _find(lst, key_id):
             return i
     return None
 
+def _in_category_rooms(state, baha, game, waiting):
+    """在指定類別（等待模式=True / 運行中=False）的房間或排隊中找玩家 → 回傳該房間"""
+    for rid2, r2 in state["rooms"].items():
+        if bool(r2.get("waiting")) != bool(waiting):
+            continue
+        for lst in (r2["room"], r2["queue"]):
+            for x in (baha, game):
+                if x and _find(lst, x) is not None:
+                    return r2
+    return None
+
 def _record_anywhere(state, baha, game):
     """在任何房間找到玩家的紀錄（房內或排隊中）"""
     for r in state["rooms"].values():
@@ -1409,7 +1420,8 @@ if rid is None:
                 st.error(_t("err_room_name"))
             elif len(state["rooms"]) >= MAX_ROOMS:
                 st.error(_t("err_room_cap"))
-            elif _record_anywhere(state, me["baha"], me["game"]) is not None:
+            elif not is_p1 and _in_category_rooms(state, me["baha"], me["game"],
+                                                  wait_ck) is not None:
                 st.error(_t("err_in_room_already"))
             else:
                 nid = "r_" + secrets.token_hex(3)
@@ -1662,15 +1674,13 @@ else:
         if ok and not me:
             st.error(_t("err_login_queue"))
         if ok and me:
-            loc_rid, other = None, None
-            for rid2, r2 in state["rooms"].items():
-                if (_find(r2["room"], me["baha"]) is not None or _find(r2["room"], me["game"]) is not None or
-                        _find(r2["queue"], me["baha"]) is not None or _find(r2["queue"], me["game"]) is not None):
-                    loc_rid, other = rid2, r2
-                    break
-            if other is not None and loc_rid == rid:
+            in_this = any(_find(lst, x) is not None
+                          for lst in (room, queue) for x in (me["baha"], me["game"]))
+            other = (None if is_p1 else
+                     _in_category_rooms(state, me["baha"], me["game"], r.get("waiting")))
+            if in_this:
                 st.error(_t("err_dup_this"))
-            elif other is not None:
+            elif other is not None and other is not r:
                 st.error(_t("err_dup_other", x=other["name"]))
             else:
                 prio = resolve_prio(me["baha"], me["game"])
