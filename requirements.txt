@@ -1,0 +1,4 @@
+streamlit
+requests
+tzdata
+streamlit-autorefresh
