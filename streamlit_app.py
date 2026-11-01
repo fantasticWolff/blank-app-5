@@ -23,10 +23,10 @@ T = {
 "zh": {
     "title_suffix": "組隊房間",
     "login_sub": "🚄 暫時登入",
-    "login_cap": "填一次就好，這個瀏覽器關掉或登出就要重填。密碼＝你排隊時設定的 4 位數。",
+    "login_cap": "填一次就好，這個瀏覽器關掉或登出就要重填。密碼＝你排隊時設定的 4～6 位數。",
     "login_btn": "登入 🚄",
     "err_need_id": "至少要填一個 ID",
-    "err_pw_len": "密碼要剛好 4 位",
+    "err_pw_len": "密碼要 4～6 位",
     "err_pw_mismatch": "密碼跟上次排隊設定的不符，請再確認",
     "welcome_prefix": "歡迎 ",
     "admin_on": "管理模式已開啟",
@@ -58,7 +58,7 @@ T = {
     "room_cap": "車掌：{owner}｜房間 {n}/{cap}｜",
     "members_h": "🛋️ 目前車廂成員（{n}/{cap}）",
     "col_seat": "座位", "col_baha": "社群ID", "col_game": "遊戲ID",
-    "f_pw": "4位密碼",
+    "f_pw": "4～6位密碼",
     "col_in": "入座", "col_swap": "換人時間", "col_left": "剩餘(分)",
     "col_ext": "延長次數", "col_pos": "順位", "col_fire": "火消耗",
     "col_start": "希望開始", "col_dur": "持續(分)",
@@ -112,10 +112,19 @@ T = {
     "mod_h": "✏️ 修改 / 延長",
     "mod_need_login": "登入後才能修改／延長",
     "mod_no_rec": "你在這間房還沒有紀錄（可能排在別間？）",
-    "mod_locked": "🔒 鎖定成員，沒有持續時間",
+    "mod_locked": "🔒 鎖定成員 — 可在下方設定任意持續時間（設定後改為計時制、到期換人）",
     "mod_in_room": "已在車廂，剩餘 {n} 分鐘｜排隊 {q} 人",
     "mod_in_queue": "已在排隊，持續 {n} 分鐘",
     "f_new_dur": "縮短後的持續時間（分鐘）",
+    "f_set_dur": "設定持續時間（分鐘，任意）",
+    "set_dur_ok": "已設定持續時間，到期會換人",
+    "set_btn": "設定（任意時間）",
+    "adm_set_h": "⏱ 直接設定成員剩餘時間（填 ID＋分鐘，0 = 立刻到期換人）",
+    "f_adm_id": "成員ID",
+    "f_adm_min": "設定分鐘數",
+    "adm_set_btn": "設定剩餘時間",
+    "adm_set_ok": "已設定",
+    "adm_set_not_found": "所有房間都找不到這個 ID",
     "mod_btn": "修改（只能縮短，冷卻 20 分）",
     "ext_btn": "延長 1 小時（剩餘 10 分內且無人排隊）",
     "err_cd": "修改冷卻中，請 {n} 分鐘後再試",
@@ -150,10 +159,10 @@ T = {
 "ja": {
     "title_suffix": "チーム募集ルーム",
     "login_sub": "🚄 一時ログイン",
-    "login_cap": "一度入力すればOK。ブラウザを閉じるかログアウトすると再入力が必要です。パスワード＝待機時に設定した4桁の数字。",
+    "login_cap": "一度入力すればOK。ブラウザを閉じるかログアウトすると再入力が必要です。パスワード＝待機時に設定した4〜6桁の数字。",
     "login_btn": "ログイン 🚄",
     "err_need_id": "IDを1つ以上入力してください",
-    "err_pw_len": "パスワードは4桁にしてください",
+    "err_pw_len": "パスワードは4〜6桁にしてください",
     "err_pw_mismatch": "前回設定したパスワードと一致しません",
     "welcome_prefix": "ようこそ ",
     "admin_on": "管理モードを有効にしました",
@@ -185,7 +194,7 @@ T = {
     "room_cap": "車掌：{owner}｜ルーム {n}/{cap}｜",
     "members_h": "🛋️ 現在の乗客（{n}/{cap}）",
     "col_seat": "座席", "col_baha": "コミュニティID", "col_game": "ゲームID",
-    "f_pw": "4桁パスワード",
+    "f_pw": "4〜6桁パスワード",
     "col_in": "着席", "col_swap": "交代時間", "col_left": "残り(分)",
     "col_ext": "延長回数", "col_pos": "順番", "col_fire": "消費火",
     "col_start": "希望開始", "col_dur": "持続(分)",
@@ -239,10 +248,19 @@ T = {
     "mod_h": "✏️ 変更・延長",
     "mod_need_login": "ログイン後に変更・延長できます",
     "mod_no_rec": "このルームに記録がありません（他ルーム待機中？）",
-    "mod_locked": "🔒 固定メンバー、持続時間なし",
+    "mod_locked": "🔒 固定メンバー — 下欄で好きな持続時間を設定可（設定後は時間制・交代あり）",
     "mod_in_room": "乗車中、残り{n}分｜待機{q}人",
     "mod_in_queue": "待機中、持続{n}分",
     "f_new_dur": "短縮後の持続時間（分）",
+    "f_set_dur": "持続時間を設定（分、自由）",
+    "set_dur_ok": "持続時間を設定しました（時間で交代）",
+    "set_btn": "設定（自由）",
+    "adm_set_h": "⏱ メンバーの残り時間を直接設定（ID＋分、0＝即交代）",
+    "f_adm_id": "メンバーID",
+    "f_adm_min": "分数",
+    "adm_set_btn": "残り時間を設定",
+    "adm_set_ok": "設定しました",
+    "adm_set_not_found": "全ルームでこのIDが見つかりません",
     "mod_btn": "変更（短縮のみ、CD20分）",
     "ext_btn": "1時間延長（残り10分以内＆待機なし）",
     "err_cd": "変更のクールダウン中、あと{n}分",
@@ -277,10 +295,10 @@ T = {
 "en": {
     "title_suffix": "Team Room",
     "login_sub": "🚄 Temporary Login",
-    "login_cap": "Enter once per session. Closing the browser or logging out clears it. Password = the 4 digits you set when queuing.",
+    "login_cap": "Enter once per session. Closing the browser or logging out clears it. Password = the 4–6 digits you set when queuing.",
     "login_btn": "Log in 🚄",
     "err_need_id": "Enter at least one ID",
-    "err_pw_len": "Password must be exactly 4 digits",
+    "err_pw_len": "Password must be 4–6 digits",
     "err_pw_mismatch": "Password doesn't match the one you set when queuing",
     "welcome_prefix": "Welcome ",
     "admin_on": "Admin mode enabled",
@@ -312,7 +330,7 @@ T = {
     "room_cap": "Conductor: {owner} | Room {n}/{cap} | ",
     "members_h": "🛋️ Current cabin members ({n}/{cap})",
     "col_seat": "Seat", "col_baha": "Community ID", "col_game": "Game ID",
-    "f_pw": "4-digit password",
+    "f_pw": "4–6 digit password",
     "col_in": "Seated", "col_swap": "Swap at", "col_left": "Left (min)",
     "col_ext": "Extensions", "col_pos": "Pos", "col_fire": "Fire cost",
     "col_start": "Desired start", "col_dur": "Duration (min)",
@@ -366,10 +384,19 @@ T = {
     "mod_h": "✏️ Modify / Extend",
     "mod_need_login": "Log in to modify/extend",
     "mod_no_rec": "You have no record in this room (queued elsewhere?)",
-    "mod_locked": "🔒 Locked member — no duration",
+    "mod_locked": "🔒 Locked member — set any duration below (you'll become timed and swap when it ends)",
     "mod_in_room": "In cabin, {n} min left | {q} queued",
     "mod_in_queue": "Queued, duration {n} min",
     "f_new_dur": "New (shorter) duration (min)",
+    "f_set_dur": "Set duration (any minutes)",
+    "set_dur_ok": "Duration set — you'll swap when it ends",
+    "set_btn": "Set (any time)",
+    "adm_set_h": "⏱ Directly set a member's remaining time (ID + minutes, 0 = expire now)",
+    "f_adm_id": "Member ID",
+    "f_adm_min": "Minutes",
+    "adm_set_btn": "Set remaining time",
+    "adm_set_ok": "Set",
+    "adm_set_not_found": "ID not found in any room",
     "mod_btn": "Modify (shorten only, 20-min cooldown)",
     "ext_btn": "Extend 1 hour (≤10 min left & nobody queuing)",
     "err_cd": "Modification on cooldown, retry in {n} min",
@@ -404,10 +431,10 @@ T = {
 "id": {
     "title_suffix": "Ruang Tim",
     "login_sub": "🚄 Login Sementara",
-    "login_cap": "Cukup isi sekali. Menutup browser atau logout menghapusnya. Kata sandi = 4 digit yang kamu set saat mengantri.",
+    "login_cap": "Cukup isi sekali. Menutup browser atau logout menghapusnya. Kata sandi = 4–6 digit yang kamu set saat mengantri.",
     "login_btn": "Masuk 🚄",
     "err_need_id": "Isi minimal satu ID",
-    "err_pw_len": "Kata sandi harus tepat 4 digit",
+    "err_pw_len": "Kata sandi harus 4–6 digit",
     "err_pw_mismatch": "Kata sandi tidak cocok dengan yang sebelumnya",
     "welcome_prefix": "Selamat datang ",
     "admin_on": "Mode admin aktif",
@@ -439,7 +466,7 @@ T = {
     "room_cap": "Kondektur: {owner} | Ruang {n}/{cap} | ",
     "members_h": "🛋️ Penumpang saat ini ({n}/{cap})",
     "col_seat": "Kursi", "col_baha": "ID Komunitas", "col_game": "ID game",
-    "f_pw": "Kata sandi 4 digit",
+    "f_pw": "Kata sandi 4–6 digit",
     "col_in": "Duduk sejak", "col_swap": "Ganti pada", "col_left": "Sisa (mnt)",
     "col_ext": "Perpanjangan", "col_pos": "Urutan", "col_fire": "Konsumsi api",
     "col_start": "Mulai diinginkan", "col_dur": "Durasi (mnt)",
@@ -493,10 +520,19 @@ T = {
     "mod_h": "✏️ Ubah / Perpanjang",
     "mod_need_login": "Login untuk ubah/perpanjang",
     "mod_no_rec": "Kamu belum ada data di ruangan ini (di ruang lain?)",
-    "mod_locked": "🔒 Terkunci — tanpa durasi",
+    "mod_locked": "🔒 Terkunci — atur durasi berapa pun di bawah (jadi berbatas waktu & akan berganti)",
     "mod_in_room": "Di kursi, sisa {n} mnt | antre {q}",
     "mod_in_queue": "Antre, durasi {n} mnt",
     "f_new_dur": "Durasi baru (lebih pendek, menit)",
+    "f_set_dur": "Atur durasi (menit, bebas)",
+    "set_dur_ok": "Durasi diatur — akan berganti saat habis",
+    "set_btn": "Atur (bebas)",
+    "adm_set_h": "⏱ Atur langsung sisa waktu anggota (ID + menit, 0 = langsung habis)",
+    "f_adm_id": "ID anggota",
+    "f_adm_min": "Menit",
+    "adm_set_btn": "Atur sisa waktu",
+    "adm_set_ok": "Diatur",
+    "adm_set_not_found": "ID tidak ditemukan di semua ruangan",
     "mod_btn": "Ubah (hanya memperpendek; jeda 20 menit)",
     "ext_btn": "Perpanjang 1 jam (sisa ≤10 mnt & tanpa antrean)",
     "err_cd": "Jeda perubahan, coba lagi dalam {n} mnt",
@@ -781,7 +817,7 @@ def _ensure_conductor(r, now):
     jr = _find(r["room"], owner)
     if jr is not None:
         p = r["room"].pop(jr)
-        if p.get("until") is not None:
+        if p.get("until") is not None and not p.get("lock_off"):   # 自選計時 → 不強制鎖定
             p["until"] = None
             changed = True
         if jr != 0:                                      # 有移位要存檔
@@ -813,7 +849,7 @@ def reconcile_room(r, now):
     dirty = False
     room, queue = r["room"], r["queue"]
     for p in room:                                  # 舊資料：p1/p2 補轉鎖定
-        if p.get("prio", 3) <= 2 and p.get("until") is not None:
+        if p.get("prio", 3) <= 2 and p.get("until") is not None and not p.get("lock_off"):
             p["until"] = None
             dirty = True
     for p in list(room):                            # 時間到：換人或延長
@@ -848,6 +884,21 @@ def reconcile_all(state, now):
             dirty = True
     return dirty
 
+def _sync_p1_secret_pw(state):
+    """Secrets 設了 p1_password → 強制所有 p1 紀錄的密碼 hash（改密碼用）"""
+    pw = _safe_secret("p1_password", "")
+    if not pw:
+        return False
+    nh = _sha(pw)
+    changed = False
+    for r2 in state["rooms"].values():
+        for lst in (r2["room"], r2["queue"]):
+            for pp in lst:
+                if pp.get("prio", 3) <= 1 and pp.get("pw_hash") != nh:
+                    pp["pw_hash"] = nh
+                    changed = True
+    return changed
+
 
 # ---------- 登入 ----------
 def _me():
@@ -875,7 +926,7 @@ def _login_gate(state):
     _lang_widget(st, "lang_login")                  # 語言在社群ID上面
     lb = st.text_input(_t("col_baha"), key="lb")
     lg = st.text_input(_t("col_game"), key="lg")
-    lpw = st.text_input(_t("f_pw"), max_chars=4, type="password", key="lpw")
+    lpw = st.text_input(_t("f_pw"), max_chars=6, type="password", key="lpw")
     ok = st.button(_t("login_btn"), type="primary")  # 登入鈕在最下面
     if ok:
         lb, lg = lb.strip(), lg.strip()
@@ -888,7 +939,7 @@ def _login_gate(state):
                 del st.query_params["room"]
             st.toast(_t("admin_on"))
             st.rerun()
-        elif len(lpw) != 4:
+        elif not (4 <= len(lpw) <= 6):
             st.error(_t("err_pw_len"))
         else:
             rec = _record_anywhere(state, lb, lg)
@@ -924,11 +975,15 @@ def _sidebar_account():
 now = now_tw()
 state = load_state()
 dirty = reconcile_all(state, now)
+if _sync_p1_secret_pw(state):                       # Secrets 有 p1_password → 同步小狼密碼
+    dirty = True
 
 _login_gate(state)
 _sidebar_account()
 me = _me()
-is_admin = st.session_state.get("admin", False)
+adm_mode = st.session_state.get("admin", False)
+is_p1 = bool(me and resolve_prio(me["baha"], me["game"]) <= 1)   # p1 ＝ 完整權限
+is_admin = adm_mode or is_p1
 
 rid = st.query_params.get("room")
 if rid and rid not in state["rooms"]:               # 房間不存在（可能已被自動刪）
@@ -1028,13 +1083,13 @@ else:
         st.query_params.clear()
         st.rerun()
 
-    # 標題列：房名＋車掌專用的改名按鈕
+    # 標題列：房名＋車掌／p1 專用的改名按鈕
     tc1, tc2 = st.columns([0.88, 0.12])
     tc1.title(f"🎮 {r['name']}")
-    if am_owner and tc2.button(_t("rename_btn"), key="rename_open_btn", use_container_width=True):
+    if (am_owner or is_admin) and tc2.button(_t("rename_btn"), key="rename_open_btn", use_container_width=True):
         st.session_state["rename_open"] = not st.session_state.get("rename_open", False)
         st.rerun()
-    if am_owner and st.session_state.get("rename_open"):
+    if (am_owner or is_admin) and st.session_state.get("rename_open"):
         st.caption(_t("rename_h"))
         rn_name = st.text_input(_t("f_room_name"), key="rn_name")
         rc1, rc2 = st.columns(2)
@@ -1348,8 +1403,11 @@ else:
         else:
             st.caption(_t("mod_in_queue", n=m_target.get("duration") or 60))
 
-        ndur = st.number_input(_t("f_new_dur"), min_value=10, value=None, key="mod_dur")
-        if st.button(_t("mod_btn"), key="mod_go", use_container_width=True):
+        self_locked = m_target is not None and m_src == "room" and m_target.get("until") is None
+        ndur = st.number_input(_t("f_set_dur") if self_locked else _t("f_new_dur"),
+                               min_value=10, value=None, key="mod_dur")
+        if st.button(_t("set_btn") if self_locked else _t("mod_btn"),
+                     key="mod_go", use_container_width=True):
             if me and m_target is not None and not _pw_ok(m_target, me["pw"], is_admin):
                 st.error(_t("err_pw_fail"))
             elif not me:
@@ -1365,7 +1423,15 @@ else:
                     st.error(_t("err_fill_dur"))
                 elif m_src == "room":
                     if m_target.get("until") is None:
-                        st.error(_t("mod_locked"))
+                        # 鎖定成員（p1/p2/車掌）自設任意時間 → 轉計時，到期換人
+                        m_target["until"] = (now + timedelta(minutes=ndur)).isoformat()
+                        m_target["lock_off"] = True
+                        m_target["last_edit"] = now.isoformat()
+                        dirty = True
+                        _touch(r, now)
+                        st.toast(_t("set_dur_ok"))
+                        if save_state(state):
+                            st.rerun()
                     elif now + timedelta(minutes=ndur) >= parse(m_target["until"]):
                         st.error(_t("err_shorter_only"))
                     else:
@@ -1412,11 +1478,42 @@ else:
                     if save_state(state):
                         st.rerun()
 
-        # ---------- 後門管理面板 ----------
-        if st.session_state.get("admin"):
+        # ---------- 管理面板（後門 或 p1） ----------
+        if is_admin:
             st.markdown("---")
             st.header(_t("admin_h"))
             st.caption(_t("admin_hint"))
+
+            st.markdown("---")
+            st.caption(_t("adm_set_h"))
+            at_id = st.text_input(_t("f_adm_id"), key="set_time_id")
+            at_min = st.number_input(_t("f_adm_min"), min_value=0, value=None, step=5, key="set_time_min")
+            if st.button(_t("adm_set_btn"), key="set_time_go", use_container_width=True):
+                tgt, tgt_room, in_q = None, None, False
+                for r2 in state["rooms"].values():
+                    i = _find(r2["room"], at_id)
+                    if i is not None:
+                        tgt, tgt_room, in_q = r2["room"][i], r2, False
+                        break
+                    j = _find(r2["queue"], at_id)
+                    if j is not None:
+                        tgt, tgt_room, in_q = r2["queue"][j], r2, True
+                        break
+                if not at_id.strip() or tgt is None:
+                    st.error(_t("adm_set_not_found"))
+                elif at_min is None:
+                    st.error(_t("err_fill_dur"))
+                else:
+                    if in_q:
+                        tgt["duration"] = at_min if at_min > 0 else None
+                    else:
+                        tgt["until"] = (now + timedelta(minutes=at_min)).isoformat()
+                        tgt["lock_off"] = True          # 已設定時間 → 不再被強制鎖定
+                    _touch(tgt_room, now)
+                    dirty = True
+                    st.toast(_t("adm_set_ok"))
+                    if save_state(state):
+                        st.rerun()
 
             for label, key in ((_t("clear_members"), "room"), (_t("clear_queue"), "queue"),
                                (_t("clear_messages"), "messages")):
