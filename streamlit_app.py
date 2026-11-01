@@ -153,6 +153,16 @@ T = {
     "status_offline": "⚠️ 讀取房間資料失敗：{x}",
     "json_broken": "room_state.json 內容損毀，請到 GitHub 手動檢查",
     "no_secrets": "還沒設定 Secrets：github_token / repo",
+    "chg_pw": "🔑 修改密碼",
+    "f_old_pw": "舊密碼",
+    "f_new_pw": "新密碼（4～6位）",
+    "f_new_pw2": "再輸入一次新密碼",
+    "chg_pw_btn": "修改密碼",
+    "err_old_pw": "舊密碼不正確",
+    "err_pw_match": "兩次新密碼不一致",
+    "chg_pw_ok": "密碼已修改，之後登入用新密碼",
+    "chg_pw_norec": "你還沒有排隊紀錄，新密碼會在下次排隊時生效",
+    "p1_pw_locked": "p1 的密碼由 Secrets（p1_password）統一管理，請改 Secrets 或移除該設定",
     "save_fail": "GitHub 儲存失敗（可能同時有人操作），請再試一次",
     "save_fail2": "⚠️ 儲存失敗：{x}",
 },
@@ -289,6 +299,16 @@ T = {
     "status_offline": "⚠️ ルームデータの読み取りに失敗：{x}",
     "json_broken": "room_state.json が壊れています。GitHub で確認してください",
     "no_secrets": "Secrets 未設定：github_token / repo",
+    "chg_pw": "🔑 パスワード変更",
+    "f_old_pw": "舊パスワード",
+    "f_new_pw": "新しいパスワード（4〜6桁）",
+    "f_new_pw2": "新しいパスワード（確認）",
+    "chg_pw_btn": "変更する",
+    "err_old_pw": "舊パスワードが違います",
+    "err_pw_match": "新しいパスワードが一致しません",
+    "chg_pw_ok": "パスワードを変更しました",
+    "chg_pw_norec": "まだ記録がないため、次回の待機時に反映されます",
+    "p1_pw_locked": "p1 のパスワードは Secrets（p1_password）で管理されています",
     "save_fail": "GitHub 保存に失敗（同時操作の可能性）。もう一度お試しください",
     "save_fail2": "⚠️ 保存に失敗：{x}",
 },
@@ -425,6 +445,16 @@ T = {
     "status_offline": "⚠️ Failed to load room data: {x}",
     "json_broken": "room_state.json is corrupted — check it on GitHub",
     "no_secrets": "Secrets not set: github_token / repo",
+    "chg_pw": "🔑 Change password",
+    "f_old_pw": "Old password",
+    "f_new_pw": "New password (4–6 chars)",
+    "f_new_pw2": "Re-enter new password",
+    "chg_pw_btn": "Change",
+    "err_old_pw": "Old password is wrong",
+    "err_pw_match": "New passwords don't match",
+    "chg_pw_ok": "Password changed",
+    "chg_pw_norec": "No records yet — the new password applies when you queue next",
+    "p1_pw_locked": "p1's password is managed by Secrets (p1_password)",
     "save_fail": "GitHub save failed (possible concurrent edit) — try again",
     "save_fail2": "⚠️ Save failed: {x}",
 },
@@ -561,6 +591,16 @@ T = {
     "status_offline": "⚠️ Gagal memuat data ruang: {x}",
     "json_broken": "room_state.json rusak — periksa di GitHub",
     "no_secrets": "Secrets belum diatur: github_token / repo",
+    "chg_pw": "🔑 Ubah kata sandi",
+    "f_old_pw": "Kata sandi lama",
+    "f_new_pw": "Kata sandi baru (4–6 digit)",
+    "f_new_pw2": "Ulangi kata sandi baru",
+    "chg_pw_btn": "Ubah",
+    "err_old_pw": "Kata sandi lama salah",
+    "err_pw_match": "Kata sandi baru tidak sama",
+    "chg_pw_ok": "Kata sandi diubah",
+    "chg_pw_norec": "Belum ada data — kata sandi baru berlaku saat antre berikutnya",
+    "p1_pw_locked": "Kata sandi p1 dikelola lewat Secrets (p1_password)",
     "save_fail": "Gagal simpan ke GitHub (mungkin ada operasi bersamaan) — coba lagi",
     "save_fail2": "⚠️ Gagal simpan: {x}",
 },
@@ -965,7 +1005,41 @@ def _login_gate(state):
                 st.rerun()
     st.stop()
 
-def _sidebar_account():
+def _change_pw(state, me, old, n1, n2):
+    """修改密碼：驗舊密碼 → 更新所有紀錄的 hash（加鹽）＋ session"""
+    if not (4 <= len(n1) <= 6):
+        st.error(_t("err_pw_len"))
+        return
+    if n1 != n2:
+        st.error(_t("err_pw_match"))
+        return
+    if resolve_prio(me["baha"], me["game"]) <= 1 and _safe_secret("p1_password", ""):
+        st.error(_t("p1_pw_locked"))
+        return
+    recs = []
+    for r2 in state["rooms"].values():
+        for lst in (r2["room"], r2["queue"]):
+            for pp in lst:
+                if any(x and _find([pp], x) is not None for x in (me["baha"], me["game"])):
+                    recs.append(pp)
+    if recs and not _pw_ok(recs[0], old, False):
+        st.error(_t("err_old_pw"))
+        return
+    for pp in recs:
+        salt = pp.get("pw_salt")
+        if not salt:
+            salt = secrets.token_hex(8)
+            pp["pw_salt"] = salt
+        pp["pw_hash"] = _hash_pw(n1, salt)
+    me["pw"] = n1
+    if recs:
+        if save_state(state):
+            st.toast(_t("chg_pw_ok"))
+            st.rerun()
+    else:
+        st.toast(_t("chg_pw_norec"))
+
+def _sidebar_account(state):
     me = _me()
     with st.sidebar:
         _lang_widget(st, "lang_sidebar")
@@ -974,6 +1048,12 @@ def _sidebar_account():
             if st.button(_t("logout"), use_container_width=True):
                 del st.session_state["me"]
                 st.rerun()
+            with st.expander(_t("chg_pw")):            # 修改密碼
+                c_old = st.text_input(_t("f_old_pw"), max_chars=6, type="password", key="pw_old")
+                c_n1 = st.text_input(_t("f_new_pw"), max_chars=6, type="password", key="pw_n1")
+                c_n2 = st.text_input(_t("f_new_pw2"), max_chars=6, type="password", key="pw_n2")
+                if st.button(_t("chg_pw_btn"), use_container_width=True):
+                    _change_pw(state, me, c_old, c_n1, c_n2)
         else:
             st.warning(_t("sb_admin_only"))
         if st.session_state.get("admin"):          # 管理模式退出鈕：全站側欄都有
@@ -991,7 +1071,7 @@ if _sync_p1_secret_pw(state):                       # Secrets 有 p1_password �
     dirty = True
 
 _login_gate(state)
-_sidebar_account()
+_sidebar_account(state)
 me = _me()
 adm_mode = st.session_state.get("admin", False)
 is_p1 = bool(me and resolve_prio(me["baha"], me["game"]) <= 1)   # p1 ＝ 完整權限
@@ -1025,12 +1105,13 @@ if rid is None:
             else:
                 nid = "r_" + secrets.token_hex(3)
                 ts = now.isoformat()
+                me_salt = secrets.token_hex(8)
                 me_rec = {                              # 車掌自動入座第 1 位、鎖定
                     "baha_id": me["baha"], "game_id": me["game"],
                     "prio": resolve_prio(me["baha"], me["game"]),
                     "score": None, "fire": None,
-                    "pw_salt": None,
-                    "pw_hash": None,
+                    "pw_salt": me_salt,
+                    "pw_hash": _hash_pw(me["pw"], me_salt),
                     "start_pref": None, "duration": 60,
                     "reg_at": ts, "sat_at": ts, "until": None,
                 }
@@ -1326,12 +1407,13 @@ else:
                     if duration is not None and prio >= 3 and duration > 60:
                         st.error(_t("err_dur_cap"))
                         st.stop()
+                    pw_salt_new = secrets.token_hex(8)
                     queue.append({
                         "baha_id": me["baha"], "game_id": me["game"], "prio": prio,
                         "score": score or None,
                         "fire": fire or None,
-                        "pw_salt": None,
-                        "pw_hash": None,
+                        "pw_salt": pw_salt_new,
+                        "pw_hash": _hash_pw(me["pw"], pw_salt_new),
                         "start_pref": start_pref,
                         "duration": duration,
                         "reg_at": now.isoformat(),
