@@ -25,9 +25,14 @@ def _safe_secret(key, default=None):
 
 ADMIN_ID = _safe_secret("admin_id", "") or ""
 try:
-    PRIORITY_IDS = [tuple(x) for x in st.secrets["priority_ids"]]
+    _pid = st.secrets["priority_ids"]
+    if isinstance(_pid, str):                     # 字串格式："巴哈|遊戲|1, 巴哈|遊戲|2"
+        PRIORITY_IDS = [tuple((s.strip() for s in item.split("|"))) for item in _pid.split(",") if item.strip()]
+        PRIORITY_IDS = [(a, g, int(p)) for a, g, p in PRIORITY_IDS]
+    else:                                          # 陣列格式（本地 secrets.toml 可用）
+        PRIORITY_IDS = [(str(a), str(g), int(p)) for a, g, p in _pid]
 except Exception:
-    PRIORITY_IDS = []        # 沒設定 → 沒有特別名單，大家一律一般玩家
+    PRIORITY_IDS = []        # 沒設定或格式錯 → 沒有特別名單，大家一律一般玩家
 
 st.set_page_config(page_title="Hololive dreams", page_icon="🎮", layout="wide")
 
