@@ -748,13 +748,14 @@ def resolve_prio(baha, game):
             return p
     return 3
 
-def _sha(pw):
-    return hashlib.sha256((pw or "").encode()).hexdigest()
+def _hash_pw(pw, salt):
+    """加鹽 SHA-256；舊資料沒有鹽時 salt 為空 → 等於無鹽（相容舊格式）"""
+    return hashlib.sha256(((salt or "") + (pw or "")).encode()).hexdigest()
 
 def _pw_ok(p, pw, is_admin):
     if is_admin or p.get("pw_hash") is None:   # 舊資料沒密碼 → 放行
         return True
-    return _sha(pw) == p["pw_hash"]
+    return _hash_pw(pw, p.get("pw_salt")) == p["pw_hash"]
 
 def _qkey(p):
     """priority 絕對 → 較早半小時批 → 分數高 → 火消耗高 → 先註冊"""
@@ -889,14 +890,20 @@ def _sync_p1_secret_pw(state):
     pw = _safe_secret("p1_password", "")
     if not pw:
         return False
-    nh = _sha(pw)
     changed = False
     for r2 in state["rooms"].values():
         for lst in (r2["room"], r2["queue"]):
             for pp in lst:
-                if pp.get("prio", 3) <= 1 and pp.get("pw_hash") != nh:
-                    pp["pw_hash"] = nh
-                    changed = True
+                if pp.get("prio", 3) <= 1:
+                    salt = pp.get("pw_salt")
+                    if not salt:
+                        salt = secrets.token_hex(8)
+                        pp["pw_salt"] = salt
+                        changed = True
+                    nh = _hash_pw(pw, salt)
+                    if pp.get("pw_hash") != nh:
+                        pp["pw_hash"] = nh
+                        changed = True
     return changed
 
 
@@ -943,9 +950,14 @@ def _login_gate(state):
             st.error(_t("err_pw_len"))
         else:
             rec = _record_anywhere(state, lb, lg)
-            if rec is not None and rec.get("pw_hash") and rec["pw_hash"] != _sha(lpw):
+            if rec is not None and rec.get("pw_hash") and not _pw_ok(rec, lpw, False):
                 st.error(_t("err_pw_mismatch"))
             else:
+                if rec is not None and rec.get("pw_salt") is None:
+                    nsalt = secrets.token_hex(8)       # 舊無鹽紀錄 → 登入成功即升級加鹽
+                    rec["pw_salt"] = nsalt
+                    rec["pw_hash"] = _hash_pw(lpw, nsalt)
+                    save_state(state)
                 st.session_state["me"] = {"baha": lb, "game": lg, "pw": lpw}
                 if "room" in st.query_params:      # 登入後一律導向列表頁（車掌/乘客）
                     del st.query_params["room"]
@@ -1017,7 +1029,8 @@ if rid is None:
                     "baha_id": me["baha"], "game_id": me["game"],
                     "prio": resolve_prio(me["baha"], me["game"]),
                     "score": None, "fire": None,
-                    "pw_hash": _sha(me["pw"]),
+                    "pw_salt": None,
+                    "pw_hash": None,
                     "start_pref": None, "duration": 60,
                     "reg_at": ts, "sat_at": ts, "until": None,
                 }
@@ -1317,7 +1330,8 @@ else:
                         "baha_id": me["baha"], "game_id": me["game"], "prio": prio,
                         "score": score or None,
                         "fire": fire or None,
-                        "pw_hash": _sha(me["pw"]),
+                        "pw_salt": None,
+                        "pw_hash": None,
                         "start_pref": start_pref,
                         "duration": duration,
                         "reg_at": now.isoformat(),
