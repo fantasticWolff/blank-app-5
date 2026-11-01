@@ -464,7 +464,10 @@ else:
 
     # ---------- 留言板 ----------
     my_id = _my_baha()
-    st.subheader(f"💬 留言板（{len(msgs)} 則）") if msgs else st.subheader("💬 留言板")
+    if msgs:
+        st.subheader(f"💬 留言板（{len(msgs)} 則）")
+    else:
+        st.subheader("💬 留言板")
     if not msgs:
         st.caption("還沒有留言")
 
