@@ -872,12 +872,11 @@ def _login_gate(state):
     st.caption(_t("announce"))
     st.subheader(_t("login_sub"))
     st.caption(_t("login_cap"))
+    _lang_widget(st, "lang_login")                  # 語言在社群ID上面
     lb = st.text_input(_t("col_baha"), key="lb")
     lg = st.text_input(_t("col_game"), key="lg")
     lpw = st.text_input(_t("f_pw"), max_chars=4, type="password", key="lpw")
-    lg_col, ok_col = st.columns([0.6, 0.4])        # 語言在左、小顆登入鈕在右
-    _lang_widget(lg_col, "lang_login")
-    ok = ok_col.button(_t("login_btn"), type="primary")
+    ok = st.button(_t("login_btn"), type="primary")  # 登入鈕在最下面
     if ok:
         lb, lg = lb.strip(), lg.strip()
         if not lb and not lg:
