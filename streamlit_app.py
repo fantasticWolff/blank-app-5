@@ -236,6 +236,28 @@ def _transfer_owner(r):
     r["owner"] = (p0["baha_id"] or p0["game_id"] or "") if p0 else ""
     return True
 
+def _ensure_conductor(r, now):
+    """車掌固定在第一個成員欄位、鎖定不換人"""
+    owner = r.get("owner")
+    if not owner:
+        return False
+    changed = False
+    jq = _find(r["queue"], owner)
+    if jq is not None and len(r["room"]) < ROOM_SIZE:   # 車掌還在排隊 → 直接入座
+        p = r["queue"].pop(jq)
+        p["sat_at"] = now.isoformat()
+        p["until"] = None                               # 鎖定
+        r["room"].insert(0, p)
+        changed = True
+    jr = _find(r["room"], owner)
+    if jr is not None:
+        p = r["room"].pop(jr)
+        if p.get("until") is not None:
+            p["until"] = None
+            changed = True
+        r["room"].insert(0, p)                          # 永遠第 1 位
+    return changed
+
 def refill(r, now):
     """空位 → 依排序遞補第一個時間到的排隊者"""
     room, queue, dirty = r["room"], r["queue"], False
@@ -276,6 +298,8 @@ def reconcile_room(r, now):
             dirty = True
     dirty |= refill(r, now)
     if _transfer_owner(r):
+        dirty = True
+    if _ensure_conductor(r, now):
         dirty = True
     if dirty:
         _touch(r, now)
@@ -381,6 +405,7 @@ if rid is None:
     st.caption(f"房間 {len(state['rooms'])}/{MAX_ROOMS} 間｜" + ANNOUNCE)
 
     st.subheader("🚃 車掌：開新房間（固定 5 人制）")
+    st.caption("開房後你就是車掌：自動坐第 1 位、鎖定不換人")
     with st.form("new_room", border=True):
         new_name = st.text_input("房間名稱")
         if st.form_submit_button("開房（我是車掌 🚃）", type="primary", use_container_width=True):
@@ -390,13 +415,23 @@ if rid is None:
                 st.error("房名要填")
             elif len(state["rooms"]) >= MAX_ROOMS:
                 st.error(f"房間已達上限 {MAX_ROOMS} 間（沒人排隊的房 8 小時會自動刪）")
+            elif _record_anywhere(state, me["baha"], me["game"]) is not None:
+                st.error("你已經在其他房間或排隊中，先退出才能開新房")
             else:
                 nid = "r_" + secrets.token_hex(3)
                 ts = now.isoformat()
+                me_rec = {                              # 車掌自動入座第 1 位、鎖定
+                    "baha_id": me["baha"], "game_id": me["game"],
+                    "prio": resolve_prio(me["baha"], me["game"]),
+                    "score": None, "fire": None,
+                    "pw_hash": _sha(me["pw"]),
+                    "start_pref": None, "duration": 60,
+                    "reg_at": ts, "sat_at": ts, "until": None,
+                }
                 state["rooms"][nid] = {
                     "name": new_name.strip(),
                     "owner": me["baha"] or me["game"],   # 車掌＝登入身分
-                    "room": [], "queue": [], "messages": [],
+                    "room": [me_rec], "queue": [], "messages": [],
                     "active": ts, "created": ts,
                 }
                 if save_state(state):
@@ -407,15 +442,42 @@ if rid is None:
     if not state["rooms"]:
         st.info("還沒有房間，當車掌開一間吧！")
     for rid2, r in state["rooms"].items():
-        c1, c2 = st.columns([0.85, 0.15])
-        c1.markdown(
-            f"**{r['name']}**　車掌：{r.get('owner') or '—'}　"
-            f"👥 {len(r['room'])}/{ROOM_SIZE}　⏳ 排隊 {len(r['queue'])}　"
-            f"💬 {len(r.get('messages', []))}"
-        )
-        if c2.button("進入", key=f"go_{rid2}", use_container_width=True):
-            st.query_params["room"] = rid2
-            st.rerun()
+        if is_admin:
+            c1, c2, c3 = st.columns([0.72, 0.16, 0.12])
+            c1.markdown(
+                f"**{r['name']}**　車掌：{r.get('owner') or '—'}　"
+                f"👥 {len(r['room'])}/{ROOM_SIZE}　⏳ 排隊 {len(r['queue'])}　"
+                f"💬 {len(r.get('messages', []))}"
+            )
+            if c2.button("進入", key=f"go_{rid2}", use_container_width=True):
+                st.query_params["room"] = rid2
+                st.rerun()
+            if c3.button("🗑 刪房", key=f"admdelroom_{rid2}", use_container_width=True):
+                st.session_state[f"delrm_{rid2}"] = True
+                st.rerun()
+            if st.session_state.get(f"delrm_{rid2}"):
+                st.warning(f"確定刪除房間「{r['name']}」？（成員、排隊、留言全滅，不可復原）")
+                bc1, bc2 = st.columns(2)
+                if bc1.button("確定刪除", key=f"delrm_yes_{rid2}", type="primary"):
+                    del state["rooms"][rid2]
+                    st.session_state.pop(f"delrm_{rid2}", None)
+                    dirty = True
+                    st.toast("房間已刪除")
+                    if save_state(state):
+                        st.rerun()
+                if bc2.button("取消", key=f"delrm_no_{rid2}"):
+                    st.session_state.pop(f"delrm_{rid2}", None)
+                    st.rerun()
+        else:
+            c1, c2 = st.columns([0.85, 0.15])
+            c1.markdown(
+                f"**{r['name']}**　車掌：{r.get('owner') or '—'}　"
+                f"👥 {len(r['room'])}/{ROOM_SIZE}　⏳ 排隊 {len(r['queue'])}　"
+                f"💬 {len(r.get('messages', []))}"
+            )
+            if c2.button("進入", key=f"go_{rid2}", use_container_width=True):
+                st.query_params["room"] = rid2
+                st.rerun()
 
 # ================================================================
 # 房間頁（所有功能都綁在這間 + 登入身分）
@@ -449,16 +511,41 @@ else:
                          "入座": "—", "換人時間": "—", "剩餘(分)": "—", "延長次數": "—"})
     st.dataframe(rows, use_container_width=True, hide_index=True)
 
+    if is_admin:                          # 管理模式：車廂成員名字旁直接刪
+        for i, p in enumerate(list(room)):
+            c1, c2 = st.columns([0.88, 0.12])
+            c1.markdown(f"座位 {i + 1}：**{p['baha_id'] or '—'}**（{p['game_id'] or '—'}）")
+            if c2.button("🗑 刪除", key=f"admrm_{i}", use_container_width=True):
+                room.remove(p)
+                dirty |= refill(r, now)
+                _transfer_owner(r)
+                _ensure_conductor(r, now)
+                dirty = True
+                _touch(r, now)
+                st.toast("已刪除乘客")
+                if save_state(state):
+                    st.rerun()
+
     st.subheader(f"⏳ 排隊（{len(queue)} 人）")
     if queue:
         qrows = [{
             "順位": i + 1, "巴哈ID": p["baha_id"] or "—", "遊戲ID": p["game_id"] or "—",
-            "隊伍分數": p.get("score") if p.get("score") is not None else "—",
             "火消耗": p.get("fire") if p.get("fire") is not None else "—",
             "希望開始": fmt(p.get("start_pref")),
-            "持續(分)": p.get("duration") if p.get("duration") is not None else "—", "註冊時間": fmt(p["reg_at"]),
+            "持續(分)": p.get("duration") if p.get("duration") is not None else "—",
         } for i, p in enumerate(sorted(queue, key=_qkey))]
         st.dataframe(qrows, use_container_width=True, hide_index=True)
+        if is_admin:                      # 管理模式：排隊者名字旁直接刪
+            for pq in sorted(queue, key=_qkey):
+                c1, c2 = st.columns([0.88, 0.12])
+                c1.markdown(f"排隊：**{pq['baha_id'] or '—'}**（{pq['game_id'] or '—'}）")
+                if c2.button("🗑 刪除", key=f"admq_{pq['reg_at']}", use_container_width=True):
+                    queue.remove(pq)
+                    dirty = True
+                    _touch(r, now)
+                    st.toast("已刪除乘客")
+                    if save_state(state):
+                        st.rerun()
     else:
         st.info("目前沒有人排隊")
 
@@ -628,7 +715,7 @@ else:
                     st.session_state["exit_pending"] = True
                     st.rerun()
 
-        if st.session_state.get("exit_pending"):
+        if me and st.session_state.get("exit_pending"):
             target = None
             for lst in (room, queue):
                 for x in (me["baha"], me["game"]):
@@ -667,12 +754,15 @@ else:
         st.markdown("---")
         st.header("✏️ 修改 / 延長")
         m_target, m_src = None, None
-        for lst, src in ((room, "room"), (queue, "queue")):
-            for x in (me["baha"], me["game"]):
-                k = _find(lst, x)
-                if k is not None and m_target is None:
-                    m_target, m_src = lst[k], src
-        if m_target is None:
+        if me:                                       # 未登入（純管理模式）不找紀錄
+            for lst, src in ((room, "room"), (queue, "queue")):
+                for x in (me["baha"], me["game"]):
+                    k = _find(lst, x)
+                    if k is not None and m_target is None:
+                        m_target, m_src = lst[k], src
+        if not me:
+            st.caption("登入後才能修改／延長")
+        elif m_target is None:
             st.caption("你在這間房還沒有紀錄（可能排在別間？）")
         elif m_src == "room" and m_target.get("until") is None:
             st.caption("🔒 鎖定成員，沒有持續時間")
@@ -744,8 +834,9 @@ else:
 
         # ---------- 車掌改名 ----------
         owner_now = (r.get("owner") or "").casefold()
-        am_owner = me and any((x or "").strip().casefold() == owner_now and owner_now
-                              for x in (me["baha"], me["game"]))
+        am_owner = bool(me and owner_now and
+                        ((me["baha"] or "").strip().casefold() == owner_now or
+                         (me["game"] or "").strip().casefold() == owner_now))
         if am_owner or is_admin:
             st.markdown("---")
             st.header("🏷 改房名（你是車掌）")
@@ -775,37 +866,12 @@ else:
         if st.session_state.get("admin"):
             st.markdown("---")
             st.header("⚙️ 管理面板")
-            if st.button("關閉管理模式"):
-                del st.session_state["admin"]
+            if st.button("🚪 退出管理模式（回登入頁）"):
+                st.session_state.pop("admin", None)
+                st.session_state.pop("me", None)     # 管理身分＋玩家身分都登出 → 回登入頁
                 st.rerun()
 
-            t = st.text_input("刪除指定玩家（任一 ID，全房間搜尋）", key="adm_target")
-            if st.button("刪除該玩家", key="adm_del"):
-                if not t.strip():
-                    st.error("請輸入 ID")
-                elif st.session_state.get("adm_conf") != t:
-                    st.session_state["adm_conf"] = t
-                st.rerun()
-            if st.session_state.get("adm_conf"):
-                ct = st.session_state["adm_conf"]
-                st.warning(f"確定刪除「{ct}」？")
-                c1, c2 = st.columns(2)
-                if c1.button("確定刪除", key="adm_del_yes", type="primary"):
-                    for rid2, r2 in state["rooms"].items():
-                        for lst in (r2["room"], r2["queue"]):
-                            while _find(lst, ct) is not None:
-                                lst.pop(_find(lst, ct))
-                        if _find(r2["room"], ct) is None:
-                            dirty |= refill(r2, now)
-                        if _transfer_owner(r2):
-                            dirty = True
-                    del st.session_state["adm_conf"]
-                    st.toast("已刪除")
-                    if save_state(state):
-                        st.rerun()
-                if c2.button("取消", key="adm_del_no"):
-                    del st.session_state["adm_conf"]
-                    st.rerun()
+            st.caption("沿用名字旁的 🗑 按鈕刪除：車廂成員／排隊者／留言；列表頁可刪整間房")
 
             for label, key in (("🧹 清空此房成員", "room"), ("🧹 清空此房排隊", "queue"),
                                ("🧹 清空此房留言", "messages")):
