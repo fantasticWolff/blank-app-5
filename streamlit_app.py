@@ -202,11 +202,11 @@ with st.sidebar:
     with st.form("join_form", border=True):
         baha = st.text_input("巴哈ID（必填其一）")
         game = st.text_input("遊戲ID（必填其一）")
-        st.caption("p1/p2（小狼、夜久）只要填 ID，下面免填")
+        st.caption("p1/p2（小狼、夜久）後面幾項可任意填，填 0 / 不選 = 不顯示")
         score = st.number_input("隊伍分數", min_value=0, value=0)
         fire = st.number_input("火消耗", min_value=0, value=0)
-        want_pref = st.checkbox("我要預約開始時間（最多提前 2 小時）")
-        pref_t = st.time_input("希望開始時間", value=None, disabled=not want_pref)
+        when = st.selectbox("希望開始時間", ["現在馬上排", "指定時間（最多提前 2 小時）"])
+        pref_t = st.time_input("指定時間", value=None, disabled=(when == "現在馬上排"))
         dur = st.number_input("持續時間（分鐘，上限 60）",
                               min_value=10, max_value=60, value=30, step=5)
         ok = st.form_submit_button("排隊 🎮", type="primary", use_container_width=True)
@@ -226,9 +226,9 @@ with st.sidebar:
             else:
                 prio = resolve_prio(baha, game)
                 start_pref = None
-                if prio >= 3 and want_pref:
+                if when != "現在馬上排":
                     if pref_t is None:
-                        st.error("請選擇希望開始時間")
+                        st.error("請選擇指定時間")
                         st.stop()
                     cand = now.replace(hour=pref_t.hour, minute=pref_t.minute,
                                        second=0, microsecond=0)
@@ -240,10 +240,10 @@ with st.sidebar:
                     start_pref = cand.isoformat()
                 queue.append({
                     "baha_id": baha, "game_id": game, "prio": prio,
-                    "score": score if prio >= 3 else None,
-                    "fire": fire if prio >= 3 else None,
+                    "score": score or None,       # 0 = 沒填 → 不顯示
+                    "fire": fire or None,
                     "start_pref": start_pref,
-                    "duration": dur if prio >= 3 else 60,
+                    "duration": dur,
                     "reg_at": now.isoformat(),
                 })
                 queue.sort(key=_qkey)
@@ -281,7 +281,8 @@ with st.sidebar:
                     dirty = True
             del st.session_state["exit_pending"]
             st.toast("已退出")
-            st.rerun()
+            if save_state(state):        # 先存檔再重整，否則改動會丟掉
+                st.rerun()
         if c2.button("取消"):
             del st.session_state["exit_pending"]
             st.rerun()
@@ -314,7 +315,8 @@ with st.sidebar:
                 dirty = True
                 del st.session_state["adm_conf"]
                 st.toast("已刪除")
-                st.rerun()
+                if save_state(state):    # 先存檔再重整，否則改動會丟掉
+                    st.rerun()
             if c2.button("取消", key="adm_del_no"):
                 del st.session_state["adm_conf"]
                 st.rerun()
@@ -333,7 +335,8 @@ with st.sidebar:
                     dirty = True
                     del st.session_state[f"clr_pending_{part}"]
                     st.toast("已清空")
-                    st.rerun()
+                    if save_state(state):    # 先存檔再重整，否則改動會丟掉
+                        st.rerun()
                 if c2.button("取消", key=f"clr_{part}_no"):
                     del st.session_state[f"clr_pending_{part}"]
                     st.rerun()
