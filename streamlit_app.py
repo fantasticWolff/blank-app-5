@@ -913,6 +913,11 @@ def _sidebar_account():
                 st.rerun()
         else:
             st.warning(_t("sb_admin_only"))
+        if st.session_state.get("admin"):          # 管理模式退出鈕：全站側欄都有
+            if st.button(_t("admin_exit"), use_container_width=True):
+                st.session_state.pop("admin", None)
+                st.session_state.pop("me", None)
+                st.rerun()
 
 
 # ---------- 頁面主流程 ----------
@@ -1411,11 +1416,6 @@ else:
         if st.session_state.get("admin"):
             st.markdown("---")
             st.header(_t("admin_h"))
-            if st.button(_t("admin_exit")):
-                st.session_state.pop("admin", None)
-                st.session_state.pop("me", None)
-                st.rerun()
-
             st.caption(_t("admin_hint"))
 
             for label, key in ((_t("clear_members"), "room"), (_t("clear_queue"), "queue"),
