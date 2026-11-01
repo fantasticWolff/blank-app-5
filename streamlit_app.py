@@ -91,14 +91,14 @@ T = {
     "pick_time": "指定時間（最多提前 2 小時）",
     "f_time": "指定時間",
     "f_score": "隊伍分數", "f_fire": "火消耗",
-    "f_dur": "持續時間（分鐘，可不填；一般玩家上限 60）",
-    "join_form_cap": "特別名單（p1/p2）欄位可全留空；一般玩家所有欄位都要填",
+    "f_dur": "持續時間（分鐘，可不填，上限 60）",
+    "join_form_cap": "欄位請全部填寫；能不能留空由系統自動判斷",
     "queue_btn": "排隊 🎮",
     "err_dup_this": "你已經在這間房的房間或排隊中，不要重複排",
     "err_dup_other": "你已經在「{x}」了，一次只能排一間（先退出再來）",
     "err_missing": "欄位沒填完：{x}",
     "err_too_far": "最多只能提前 2 小時預約！",
-    "err_dur_cap": "一般玩家持續時間上限 60 分鐘！",
+    "err_dur_cap": "持續時間上限 60 分鐘！",
     "joined": "已加入排隊！",
     "err_login_first": "請先登入",
     "err_login_queue": "請先登入再排隊",
@@ -143,6 +143,19 @@ T = {
     "depart_word": "發車",
     "depart_done": "發車時間已設定",
     "depart_cleared": "已取消排定，立即發車",
+    "songs_h": "🎵 大家想玩的歌",
+    "f_new_song": "歌名",
+    "add_song_btn": "＋ 新增並投它一票",
+    "vote_btn": "我想玩",
+    "cancel_vote": "★ 我的選擇（點一下取消）",
+    "song_n": "{n} 人",
+    "err_one_song": "每人只能選一首（先取消目前的）",
+    "err_song_name": "歌名要填",
+    "err_song_dup": "這首已經在列表上，直接按「我想玩」就好",
+    "song_added": "已新增＋投一票",
+    "voted_ok": "已投給這首",
+    "vote_cleared": "已取消我的票",
+    "songs_empty": "還沒有人點歌，來當第一個！",
     "mod_btn": "修改（只能縮短，冷卻 20 分）",
     "ext_btn": "延長 1 小時（剩餘 10 分內且無人排隊）",
     "err_cd": "修改冷卻中，請 {n} 分鐘後再試",
@@ -255,14 +268,14 @@ T = {
     "pick_time": "指定時刻（2時間前まで）",
     "f_time": "指定時刻",
     "f_score": "チームスコア", "f_fire": "消費火",
-    "f_dur": "持続時間（分、未入力可・一般は60まで）",
-    "join_form_cap": "特別リスト（p1/p2）は全て空欄でOK。一般は全項目必須",
+    "f_dur": "持続時間（分、未入力可、60まで）",
+    "join_form_cap": "各項目は基本的に必須。空欄可否はシステムが自動判定します",
     "queue_btn": "並ぶ 🎮",
     "err_dup_this": "このルームに既に参加・待機中です",
     "err_dup_other": "「{x}」に既にいます。1度に1ルームのみ（先に退出してください）",
     "err_missing": "未入力の項目：{x}",
     "err_too_far": "予約は2時間前までです！",
-    "err_dur_cap": "一般は持続時間60分までです！",
+    "err_dur_cap": "持続時間は60分までです！",
     "joined": "待機に並びました！",
     "err_login_first": "先にログインしてください",
     "err_login_queue": "ログイン後に待機できます",
@@ -307,6 +320,19 @@ T = {
     "depart_word": "発車",
     "depart_done": "発車時刻を設定しました",
     "depart_cleared": "取消しました（すぐ発車）",
+    "songs_h": "🎵 みんながやりたい曲",
+    "f_new_song": "曲名",
+    "add_song_btn": "＋ 新規追加して投票",
+    "vote_btn": "プレイしたい",
+    "cancel_vote": "★ 選択中（タップで取消）",
+    "song_n": "{n}人",
+    "err_one_song": "1人1曲まで（先に現在の票を取消）",
+    "err_song_name": "曲名を入力してください",
+    "err_song_dup": "この曲は既にあります。「プレイしたい」を押してください",
+    "song_added": "追加して投票しました",
+    "voted_ok": "投票しました",
+    "vote_cleared": "取消しました",
+    "songs_empty": "まだ誰も曲を追加していません！",
     "mod_btn": "変更（短縮のみ、CD20分）",
     "ext_btn": "1時間延長（残り10分以内＆待機なし）",
     "err_cd": "変更のクールダウン中、あと{n}分",
@@ -419,14 +445,14 @@ T = {
     "pick_time": "Pick a time (up to 2 hours ahead)",
     "f_time": "Pick time",
     "f_score": "Team score", "f_fire": "Fire cost",
-    "f_dur": "Duration (minutes, optional; max 60 for regular players)",
-    "join_form_cap": "Special-list players (p1/p2) may leave fields empty; regular players must fill all",
+    "f_dur": "Duration (minutes, optional, max 60)",
+    "join_form_cap": "Please fill in all fields; whether blanks are allowed is decided automatically",
     "queue_btn": "Queue 🎮",
     "err_dup_this": "You're already in this room or its queue",
     "err_dup_other": "You're already in \"{x}\" — one room at a time (leave first)",
     "err_missing": "Missing fields: {x}",
     "err_too_far": "You can book at most 2 hours ahead!",
-    "err_dur_cap": "Regular players: max 60 minutes!",
+    "err_dur_cap": "Duration max is 60 minutes!",
     "joined": "Queued!",
     "err_login_first": "Please log in first",
     "err_login_queue": "Log in to queue",
@@ -471,6 +497,19 @@ T = {
     "depart_word": "departs",
     "depart_done": "Departure time set",
     "depart_cleared": "Schedule cleared — departs now",
+    "songs_h": "🎵 Songs everyone wants to play",
+    "f_new_song": "Song title",
+    "add_song_btn": "＋ Add & vote",
+    "vote_btn": "I want to play",
+    "cancel_vote": "★ my pick (click to cancel)",
+    "song_n": "{n} players",
+    "err_one_song": "One pick per player (cancel your current one first)",
+    "err_song_name": "Song title required",
+    "err_song_dup": "That song already exists — just press \"I want to play\"",
+    "song_added": "Added & voted",
+    "voted_ok": "Voted",
+    "vote_cleared": "Vote cancelled",
+    "songs_empty": "No songs yet — be the first!",
     "mod_btn": "Modify (shorten only, 20-min cooldown)",
     "ext_btn": "Extend 1 hour (≤10 min left & nobody queuing)",
     "err_cd": "Modification on cooldown, retry in {n} min",
@@ -583,8 +622,8 @@ T = {
     "pick_time": "Pilih waktu (maks 2 jam ke depan)",
     "f_time": "Pilih waktu",
     "f_score": "Skor tim", "f_fire": "Konsumsi api",
-    "f_dur": "Durasi (menit, opsional; maks 60 untuk reguler)",
-    "join_form_cap": "Daftar khusus (p1/p2) boleh kosong; pemain reguler wajib isi semua",
+    "f_dur": "Durasi (menit, opsional, maks 60)",
+    "join_form_cap": "Isi semua kolom; boleh kosong atau tidak dinilai otomatis oleh sistem",
     "queue_btn": "Antre 🎮",
     "err_dup_this": "Kamu sudah di ruangan/antrean ini",
     "err_dup_other": "Kamu sudah di \"{x}\" — hanya satu ruangan (keluar dulu)",
@@ -635,6 +674,19 @@ T = {
     "depart_word": "berangkat",
     "depart_done": "Waktu keberangkatan diatur",
     "depart_cleared": "Jadwal dibatalkan — langsung berangkat",
+    "songs_h": "🎵 Lagu yang ingin dimainkan",
+    "f_new_song": "Judul lagu",
+    "add_song_btn": "＋ Tambah & pilih",
+    "vote_btn": "Aku mau main",
+    "cancel_vote": "★ pilihanku (klik untuk batal)",
+    "song_n": "{n} orang",
+    "err_one_song": "Satu pilihan per orang (batalkan dulu)",
+    "err_song_name": "Judul lagu wajib diisi",
+    "err_song_dup": "Lagu itu sudah ada — tekan \"Aku mau main\" saja",
+    "song_added": "Ditambah & dipilih",
+    "voted_ok": "Dipilih",
+    "vote_cleared": "Pilihan dibatalkan",
+    "songs_empty": "Belum ada lagu — jadilah yang pertama!",
     "mod_btn": "Ubah (hanya memperpendek; jeda 20 menit)",
     "ext_btn": "Perpanjang 1 jam (sisa ≤10 mnt & tanpa antrean)",
     "err_cd": "Jeda perubahan, coba lagi dalam {n} mnt",
@@ -1000,7 +1052,32 @@ def reconcile_all(state, now):
         if not r["queue"] and act and now - parse(act) > ROOM_TTL:
             del state["rooms"][rid]
             dirty = True
+    dirty |= _reconcile_songs(state, now)
     return dirty
+
+def _reconcile_songs(state, now):
+    """歌曲清單：上車的人移除想玩計數；0 人持續 8 小時 → 自動刪歌"""
+    changed = False
+    for sid in list(state.get("songs", {})):
+        sg = state["songs"][sid]
+        sg.setdefault("votes", {})
+        for vkey in list(sg["votes"]):              # 已上車 → 移除計數
+            seated = any(_find(r2["room"], vkey) is not None
+                         for r2 in state["rooms"].values())
+            if seated and resolve_prio(vkey, vkey) > 1:   # p1 的票不受上車影響
+                del sg["votes"][vkey]
+                changed = True
+        if not sg["votes"]:
+            if not sg.get("zero_since"):
+                sg["zero_since"] = now.isoformat()
+                changed = True
+            elif now - parse(sg["zero_since"]) > ROOM_TTL:
+                del state["songs"][sid]            # 0 人滿 8 小時 → 刪歌
+                changed = True
+        elif sg.get("zero_since"):
+            sg["zero_since"] = None
+            changed = True
+    return changed
 
 def _sync_p1_secret_pw(state):
     """Secrets 設了 p1_password → 強制所有 p1 紀錄的密碼 hash（改密碼用）"""
@@ -1237,6 +1314,65 @@ if rid is None:
             if c2.button(_t("enter"), key=f"go_{rid2}", use_container_width=True):
                 st.query_params["room"] = rid2
                 st.rerun()
+
+    # ---------- 歌曲欄位（乘客想玩什麼） ----------
+    st.subheader(_t("songs_h"))
+    songs = state.setdefault("songs", {})
+    my_id = _my_baha()
+    if not songs:
+        st.caption(_t("songs_empty"))
+    my_song = next((sid for sid, sg in songs.items()
+                    if my_id and my_id in sg.get("votes", {})), None)
+    for sid, sg in sorted(list(songs.items()),
+                          key=lambda kv: (-len(kv[1].get("votes", {})), kv[1]["name"].casefold())):
+        mine = my_id and my_id in sg.get("votes", {})
+        if is_admin:
+            c1, c2, c3 = st.columns([0.66, 0.22, 0.12])
+        else:
+            c1, c2 = st.columns([0.7, 0.3])
+            c3 = None
+        c1.markdown(f"🎵 **{sg['name']}**　{_t('song_n', n=len(sg.get('votes', {})))}{'★' if mine else ''}")
+        if not me:
+            pass
+        elif mine:
+            if c2.button(_t("cancel_vote"), key=f"sv_{sid}", use_container_width=True):
+                del sg["votes"][my_id]
+                dirty = True
+                st.toast(_t("vote_cleared"))
+        else:
+            if c2.button(_t("vote_btn"), key=f"sv_{sid}", use_container_width=True):
+                if my_song is not None and not is_p1:      # p1 不受一次一首限制
+                    st.error(_t("err_one_song"))
+                else:
+                    sg["votes"][my_id] = {"at": now.isoformat()}
+                    dirty = True
+                    st.toast(_t("voted_ok"))
+        if is_admin and c3.button("🗑", key=f"sdel_{sid}", help=sg["name"]):
+            del songs[sid]
+            dirty = True
+            st.toast(_t("cleared"))
+
+    with st.form("add_song", border=True):
+        nsong = st.text_input(_t("f_new_song"))
+        if st.form_submit_button(_t("add_song_btn"), type="primary", use_container_width=True):
+            my_song2 = next((sid for sid, sg in songs.items()
+                             if my_id and my_id in sg.get("votes", {})), None)
+            if not me:
+                st.error(_t("err_login_first"))
+            elif not nsong.strip():
+                st.error(_t("err_song_name"))
+            elif my_song2 is not None and not is_p1:
+                st.error(_t("err_one_song"))
+            elif any(sg["name"].casefold() == nsong.strip().casefold()
+                     for sg in songs.values()):
+                st.error(_t("err_song_dup"))
+            else:
+                sid = "s_" + secrets.token_hex(3)
+                songs[sid] = {"name": nsong.strip(),
+                             "votes": {my_id: {"at": now.isoformat()}},
+                             "zero_since": None}
+                dirty = True
+                st.toast(_t("song_added"))
 
 # ================================================================
 # 房間頁（所有功能都綁在這間 + 登入身分）
@@ -1589,7 +1725,7 @@ else:
                 st.error(_t("mod_no_rec"))
             else:
                 le = m_target.get("last_edit")
-                if le and now - parse(le) < timedelta(minutes=20):
+                if le and now - parse(le) < timedelta(minutes=20) and m_target.get("prio", 3) >= 3:
                     wait = 20 - int((now - parse(le)).total_seconds() // 60)
                     st.error(_t("err_cd", n=wait))
                 elif ndur is None:
