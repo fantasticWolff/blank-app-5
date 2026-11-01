@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""HoloDreams 組隊房間：多房間版，狀態存 GitHub repo JSON"""
+"""HoloDreams 組隊房間：多房間 + 暫時登入制，狀態存 GitHub repo JSON"""
 import base64
 import hashlib
 import json
@@ -27,8 +27,9 @@ ADMIN_ID = _safe_secret("admin_id", "") or ""
 try:
     _pid = st.secrets["priority_ids"]
     if isinstance(_pid, str):                     # 字串格式："巴哈|遊戲|1, 巴哈|遊戲|2"
-        PRIORITY_IDS = [tuple((s.strip() for s in item.split("|"))) for item in _pid.split(",") if item.strip()]
-        PRIORITY_IDS = [(a, g, int(p)) for a, g, p in PRIORITY_IDS]
+        PRIORITY_IDS = [(a.strip(), g.strip(), int(p.strip()))
+                        for item in _pid.split(",") if item.strip()
+                        for a, g, p in [item.split("|")]]
     else:                                          # 陣列格式（本地 secrets.toml 可用）
         PRIORITY_IDS = [(str(a), str(g), int(p)) for a, g, p in _pid]
 except Exception:
@@ -211,19 +212,21 @@ def _find(lst, key_id):
             return i
     return None
 
-def _locate_all_rooms(state, baha, game):
-    """回傳玩家目前在哪間房（房裡或排隊中）：(rid, room_obj)"""
-    for rid2, r2 in state["rooms"].items():
-        for x in (baha, game):
-            if _find(r2["room"], x) is not None or _find(r2["queue"], x) is not None:
-                return rid2, r2
-    return None, None
+def _record_anywhere(state, baha, game):
+    """在任何房間找到玩家的紀錄（房內或排隊中）"""
+    for r in state["rooms"].values():
+        for lst in (r["room"], r["queue"]):
+            for x in (baha, game):
+                i = _find(lst, x)
+                if i is not None:
+                    return lst[i]
+    return None
 
 def _touch(r, now):
     r["active"] = now.isoformat()             # 房間活動時間（8 小時沒動+沒人排隊會刪）
 
 def _transfer_owner(r):
-    """房主不在房裡/排隊時，房主身分換給房內最早成員（只換一次，換了就鎖定）"""
+    """車掌不在房裡/排隊時，車掌身分換給房內最早成員（只換一次，換了就鎖定）"""
     if not r.get("owner"):
         return False
     for lst in (r["room"], r["queue"]):
@@ -291,6 +294,66 @@ def reconcile_all(state, now):
     return dirty
 
 
+# ---------- 登入 ----------
+def _me():
+    me = st.session_state.get("me")
+    if not me:
+        return None
+    me.setdefault("baha", "")
+    me.setdefault("game", "")
+    me.setdefault("pw", "")
+    return me
+
+def _my_baha():
+    me = _me()
+    return (me["baha"] or me["game"] or "") if me else ""
+
+def _login_gate(state):
+    """未登入時顯示登入頁；回傳 None 表示已登入（或管理模式），否則不回傳"""
+    me = _me()
+    if me or st.session_state.get("admin"):
+        return None
+    st.title("🎮 Hololive dreams 組隊房間")
+    st.caption(ANNOUNCE)
+    st.subheader("🚄 暫時登入")
+    st.caption("填一次就好，這個瀏覽器關掉或登出就要重填。密碼＝你排隊時設定的 4 位數。")
+    with st.form("login_form", border=True):
+        lb = st.text_input("巴哈ID", key="lb")
+        lg = st.text_input("遊戲ID", key="lg")
+        lpw = st.text_input("4位密碼", max_chars=4, type="password", key="lpw")
+        ok = st.form_submit_button("登入 🚄", type="primary", use_container_width=True)
+    if ok:
+        lb, lg = lb.strip(), lg.strip()
+        if not lb and not lg:
+            st.error("至少要填一個 ID")
+        elif ADMIN_ID and (lb.casefold() == ADMIN_ID or lg.casefold() == ADMIN_ID):
+            st.session_state["admin"] = True
+            st.toast("管理模式已開啟")
+            st.rerun()
+        elif len(lpw) != 4:
+            st.error("密碼要剛好 4 位")
+        else:
+            rec = _record_anywhere(state, lb, lg)
+            if rec is not None and rec.get("pw_hash") and rec["pw_hash"] != _sha(lpw):
+                st.error("密碼跟上次排隊設定的不符，請再確認")
+            else:
+                st.session_state["me"] = {"baha": lb, "game": lg, "pw": lpw}
+                st.toast(f"歡迎 {lb or lg}！")
+                st.rerun()
+    st.stop()
+
+def _sidebar_account():
+    me = _me()
+    with st.sidebar:
+        if me:
+            st.success(f"🚄 已登入：{me['baha'] or me['game']}")
+            if st.button("登出", use_container_width=True):
+                del st.session_state["me"]
+                st.rerun()
+        else:
+            st.warning("管理模式（未登入玩家身分）")
+
+
 # ---------- 頁面主流程 ----------
 now = now_tw()
 state = load_state()
@@ -298,7 +361,12 @@ dirty = reconcile_all(state, now)
 
 ANNOUNCE = ("入房滿 1 小時換人；沒人排隊自動延長（不限次）｜最多提前 2 小時預約｜"
             "📌 修改持續時間只能縮短、冷卻 20 分｜📌 剩餘 10 分內且無人排隊可手動延長｜"
-            "📌 一次只能排一間房")
+            "📌 一次只能排一間房｜房主（車掌）無特別權限，開房的稱車掌")
+
+_login_gate(state)
+_sidebar_account()
+me = _me()
+is_admin = st.session_state.get("admin", False)
 
 rid = st.query_params.get("room")
 if rid and rid not in state["rooms"]:               # 房間不存在（可能已被自動刪）
@@ -306,40 +374,28 @@ if rid and rid not in state["rooms"]:               # 房間不存在（可能�
     rid = None
 
 # ================================================================
-# 房間列表頁
+# 房間列表頁：選車掌（開新房）或乘客（進現有房）
 # ================================================================
 if rid is None:
     st.title("🎮 Hololive dreams 組隊房間")
     st.caption(f"房間 {len(state['rooms'])}/{MAX_ROOMS} 間｜" + ANNOUNCE)
 
-    st.subheader("🏠 房間列表")
-    if not state["rooms"]:
-        st.info("還沒有房間，開一間吧！")
-    for rid2, r in state["rooms"].items():
-        c1, c2 = st.columns([0.85, 0.15])
-        c1.markdown(
-            f"**{r['name']}**　開房：{r.get('owner') or '—'}　"
-            f"👥 {len(r['room'])}/{ROOM_SIZE}　⏳ 排隊 {len(r['queue'])}　"
-            f"💬 {len(r.get('messages', []))}"
-        )
-        if c2.button("進入", key=f"go_{rid2}", use_container_width=True):
-            st.query_params["room"] = rid2
-            st.rerun()
-
-    st.subheader("＋ 開新房間（固定 5 人制）")
+    st.subheader("🚃 車掌：開新房間（固定 5 人制）")
     with st.form("new_room", border=True):
         new_name = st.text_input("房間名稱")
-        new_owner = st.text_input("開房者（你的巴哈或遊戲ID，僅顯示用）")
-        if st.form_submit_button("開房 🏠", type="primary", use_container_width=True):
-            if not new_name.strip() or not new_owner.strip():
-                st.error("房名和開房者 ID 都要填")
+        if st.form_submit_button("開房（我是車掌 🚃）", type="primary", use_container_width=True):
+            if not me:
+                st.error("請先登入")
+            elif not new_name.strip():
+                st.error("房名要填")
             elif len(state["rooms"]) >= MAX_ROOMS:
                 st.error(f"房間已達上限 {MAX_ROOMS} 間（沒人排隊的房 8 小時會自動刪）")
             else:
                 nid = "r_" + secrets.token_hex(3)
                 ts = now.isoformat()
                 state["rooms"][nid] = {
-                    "name": new_name.strip(), "owner": new_owner.strip(),
+                    "name": new_name.strip(),
+                    "owner": me["baha"] or me["game"],   # 車掌＝登入身分
                     "room": [], "queue": [], "messages": [],
                     "active": ts, "created": ts,
                 }
@@ -347,11 +403,22 @@ if rid is None:
                     st.query_params["room"] = nid
                     st.rerun()
 
-    with st.sidebar:
-        st.caption("先進入一間房間，或自己開一間。")
+    st.subheader("🎫 乘客：進入現有房間")
+    if not state["rooms"]:
+        st.info("還沒有房間，當車掌開一間吧！")
+    for rid2, r in state["rooms"].items():
+        c1, c2 = st.columns([0.85, 0.15])
+        c1.markdown(
+            f"**{r['name']}**　車掌：{r.get('owner') or '—'}　"
+            f"👥 {len(r['room'])}/{ROOM_SIZE}　⏳ 排隊 {len(r['queue'])}　"
+            f"💬 {len(r.get('messages', []))}"
+        )
+        if c2.button("進入", key=f"go_{rid2}", use_container_width=True):
+            st.query_params["room"] = rid2
+            st.rerun()
 
 # ================================================================
-# 房間頁（所有功能都綁在這間）
+# 房間頁（所有功能都綁在這間 + 登入身分）
 # ================================================================
 else:
     r = state["rooms"][rid]
@@ -362,9 +429,9 @@ else:
         st.query_params.clear()
         st.rerun()
     st.title(f"🎮 {r['name']}")
-    st.caption(f"開房：{r.get('owner') or '—'}｜房間 {len(room)}/{ROOM_SIZE}｜" + ANNOUNCE)
+    st.caption(f"車掌：{r.get('owner') or '—'}｜房間 {len(room)}/{ROOM_SIZE}｜" + ANNOUNCE)
 
-    st.subheader(f"🛋️ 目前房間成員（{len(room)}/{ROOM_SIZE}）")
+    st.subheader(f"🛋️ 目前車廂成員（{len(room)}/{ROOM_SIZE}）")
     rows = []
     for i in range(ROOM_SIZE):
         if i < len(room):
@@ -396,19 +463,49 @@ else:
         st.info("目前沒有人排隊")
 
     # ---------- 留言板 ----------
-    my_id = (st.session_state.get("sb_baha") or st.session_state.get("sb_game") or "").strip()
-
+    my_id = _my_baha()
     st.subheader(f"💬 留言板（{len(msgs)} 則）") if msgs else st.subheader("💬 留言板")
     if not msgs:
         st.caption("還沒有留言")
 
+    if is_admin:                                   # 管理模式：刪除全部留言
+        bc1, bc2 = st.columns([0.75, 0.25])
+        if bc2.button("🧹 刪除全部留言", key="clr_msgs_board", use_container_width=True):
+            st.session_state["clr_msgs_board"] = True
+            st.rerun()
+        if st.session_state.get("clr_msgs_board"):
+            st.warning("確定刪除此房全部留言？（不可復原）")
+            cc1, cc2 = st.columns(2)
+            if cc1.button("確定刪除全部", key="clr_msgs_board_yes", type="primary"):
+                msgs.clear()
+                st.session_state.pop("clr_msgs_board", None)
+                dirty = True
+                _touch(r, now)
+                st.toast("已刪除全部留言")
+                if save_state(state):
+                    st.rerun()
+            if cc2.button("取消", key="clr_msgs_board_no"):
+                st.session_state.pop("clr_msgs_board", None)
+                st.rerun()
+
     for m in reversed(msgs):
         tag = f"　↩ 回覆 #{m['reply_to']}" if m.get("reply_to") else ""
-        c1, c2 = st.columns([0.92, 0.08])
+        if is_admin:
+            c1, c2, c3 = st.columns([0.84, 0.08, 0.08])
+        else:
+            c1, c2 = st.columns([0.92, 0.08])
+            c3 = None
         c1.markdown(f"**#{m['no']}　{m['name']}**{tag}　—　{fmt(m['ts'])}  \n{m['text']}")
         if c2.button("↩", key=f"reply_{m['no']}", help=f"回覆 #{m['no']}"):
             st.session_state["reply_to"] = m["no"]     # 點選回覆，像 YouTube
             st.rerun()
+        if is_admin and c3.button("🗑", key=f"delmsg_{m['no']}", help="刪除此留言"):
+            msgs[:] = [x for x in msgs if x["no"] != m["no"]]
+            dirty = True
+            _touch(r, now)
+            st.toast("已刪除留言")
+            if save_state(state):
+                st.rerun()
 
     reply_to = st.session_state.get("reply_to", 0)
     if reply_to and any(x["no"] == reply_to for x in msgs):
@@ -425,13 +522,13 @@ else:
         m_text = st.text_area(label, max_chars=500)
         if st.form_submit_button("留言 💬", type="primary", use_container_width=True):
             if not my_id:
-                st.error("請先在左側填 巴哈ID 或 遊戲ID")
+                st.error("請先登入")
             elif not m_text.strip():
                 st.error("內容要填")
             else:
                 msgs.append({
                     "no": msgs[-1]["no"] + 1 if msgs else 1,
-                    "name": my_id,                     # 名義直接用左側 ID
+                    "name": my_id,
                     "reply_to": reply_to or None,
                     "text": m_text.strip(),
                     "ts": now.isoformat(),
@@ -442,17 +539,13 @@ else:
                 _touch(r, now)
                 st.toast("已留言！")
 
-    # ---------- 側邊欄：排隊表單 / 退出 / 修改 / 管理 ----------
+    # ---------- 側邊欄：排隊 / 退出 / 修改 / 改房名 / 管理 ----------
     with st.sidebar:
-        baha = st.text_input("巴哈ID", key="sb_baha")
-        game = st.text_input("遊戲ID", key="sb_game")
-        st.caption("排隊與留言板共用這兩個 ID")
-
         st.header("✍️ 加入排隊")
+        st.caption(f"以「{my_id}」的身分排隊")
         when = st.selectbox("希望開始時間", ["現在馬上排", "指定時間（最多提前 2 小時）"])
         with st.form("join_form", border=True):
-            pw = st.text_input("4位密碼（退出時必須相同）", max_chars=4, type="password")
-            st.caption("一般玩家所有欄位都要填（沒填會跳警告）；特別名單只需 ID＋密碼")
+            st.caption("特別名單（p1/p2）欄位可全留空；一般玩家所有欄位都要填")
             score = st.number_input("隊伍分數", min_value=0, value=0)
             fire = st.number_input("火消耗", min_value=0, value=0)
             pref_t = st.time_input("指定時間", value=None, disabled=(when == "現在馬上排"))
@@ -460,120 +553,138 @@ else:
                                   min_value=10, value=None, step=5, placeholder="60")
             ok = st.form_submit_button("排隊 🎮", type="primary", use_container_width=True)
 
-        if ok:
-            baha, game = baha.strip(), game.strip()
-            if not baha and not game:
-                st.error("至少要填一個 ID")
-            elif ADMIN_ID and (baha.casefold() == ADMIN_ID or game.casefold() == ADMIN_ID):
-                st.session_state["admin"] = True
-                st.toast("管理模式已開啟")
-                st.rerun()
-            elif len(pw) != 4:
-                st.error("密碼請設剛好 4 位")
+        if ok and me:
+            loc_rid, other = None, None
+            for rid2, r2 in state["rooms"].items():
+                if (_find(r2["room"], me["baha"]) is not None or _find(r2["room"], me["game"]) is not None or
+                        _find(r2["queue"], me["baha"]) is not None or _find(r2["queue"], me["game"]) is not None):
+                    loc_rid, other = rid2, r2
+                    break
+            if other is not None and loc_rid == rid:
+                st.error("你已經在這間房的房間或排隊中，不要重複排")
+            elif other is not None:
+                st.error(f"你已經在「{other['name']}」了，一次只能排一間（先退出再來）")
             else:
-                loc_rid, other = _locate_all_rooms(state, baha, game)
-                if other is not None and loc_rid == rid:
-                    st.error("你已經在這間房的房間或排隊中，不要重複排")
-                elif other is not None:
-                    st.error(f"你已經在「{other['name']}」了，一次只能排一間（先退出再來）")
+                prio = resolve_prio(me["baha"], me["game"])
+                missing = []
+                if prio >= 3:                        # 一般玩家：所有欄位必填
+                    if not score:
+                        missing.append("隊伍分數")
+                    if not fire:
+                        missing.append("火消耗")
+                    if when != "現在馬上排" and pref_t is None:
+                        missing.append("指定時間")
+                    if dur is None:
+                        missing.append("持續時間")
+                if missing:
+                    st.error("欄位沒填完：" + "、".join(missing))
                 else:
-                    prio = resolve_prio(baha, game)
-                    missing = []
-                    if prio >= 3:                        # 一般玩家：所有欄位必填
-                        if not baha:
-                            missing.append("巴哈ID")
-                        if not game:
-                            missing.append("遊戲ID")
-                        if not score:
-                            missing.append("隊伍分數")
-                        if not fire:
-                            missing.append("火消耗")
-                        if when != "現在馬上排" and pref_t is None:
-                            missing.append("指定時間")
-                        if dur is None:
-                            missing.append("持續時間")
-                    if missing:
-                        st.error("欄位沒填完：" + "、".join(missing))
-                    else:
-                        start_pref = None
-                        if when != "現在馬上排" and pref_t is not None:
-                            cand = now.replace(hour=pref_t.hour, minute=pref_t.minute,
-                                               second=0, microsecond=0)
-                            if cand < now:
-                                cand += timedelta(days=1)
-                            if prio >= 3 and cand > now + MAX_AHEAD:
-                                st.error("最多只能提前 2 小時預約！")
-                                st.stop()
-                            start_pref = cand.isoformat()
-                        duration = dur
-                        if duration is not None and prio >= 3 and duration > 60:
-                            st.error("一般玩家持續時間上限 60 分鐘！")
+                    start_pref = None
+                    if when != "現在馬上排" and pref_t is not None:
+                        cand = now.replace(hour=pref_t.hour, minute=pref_t.minute,
+                                           second=0, microsecond=0)
+                        if cand < now:
+                            cand += timedelta(days=1)
+                        if prio >= 3 and cand > now + MAX_AHEAD:
+                            st.error("最多只能提前 2 小時預約！")
                             st.stop()
-                        queue.append({
-                            "baha_id": baha, "game_id": game, "prio": prio,
-                            "score": score or None,       # 0 = 沒填 → 不顯示
-                            "fire": fire or None,
-                            "pw_hash": _sha(pw),
-                            "start_pref": start_pref,
-                            "duration": duration,
-                            "reg_at": now.isoformat(),
-                        })
-                        queue.sort(key=_qkey)
-                        dirty = True
-                        _touch(r, now)
-                        st.toast("已加入排隊！")
+                        start_pref = cand.isoformat()
+                    duration = dur
+                    if duration is not None and prio >= 3 and duration > 60:
+                        st.error("一般玩家持續時間上限 60 分鐘！")
+                        st.stop()
+                    queue.append({
+                        "baha_id": me["baha"], "game_id": me["game"], "prio": prio,
+                        "score": score or None,       # 0 = 沒填 → 不顯示
+                        "fire": fire or None,
+                        "pw_hash": _sha(me["pw"]),
+                        "start_pref": start_pref,
+                        "duration": duration,
+                        "reg_at": now.isoformat(),
+                    })
+                    queue.sort(key=_qkey)
+                    dirty = True
+                    _touch(r, now)
+                    st.toast("已加入排隊！")
 
         st.markdown("---")
         st.header("🚪 退出")
-        xid = st.text_input("輸入你的巴哈ID或遊戲ID", key="exit_id")
-        xpw = st.text_input("你的4位密碼", max_chars=4, type="password", key="exit_pw")
         if st.button("退出房間 / 排隊", use_container_width=True):
-            is_admin = st.session_state.get("admin", False)
-            if ADMIN_ID and xid.strip().casefold() == ADMIN_ID:
-                st.session_state["admin"] = True
-                st.rerun()
-            elif _find(room, xid) is None and _find(queue, xid) is None:
-                st.error("你不在這間房（房內和排隊都找不到這個 ID）")
+            if not me:
+                st.error("請先登入")
             else:
-                i = _find(room, xid)
-                target = room[i] if i is not None else queue[_find(queue, xid)]
-                if _pw_ok(target, xpw, is_admin):
-                    st.session_state["exit_pending"] = xid.strip()
-                    st.rerun()
+                i = _find(room, me["baha"]) if me["baha"] else None
+                if i is None and me["game"]:
+                    i = _find(room, me["game"])
+                j = _find(queue, me["baha"]) if me["baha"] else None
+                if j is None and me["game"]:
+                    j = _find(queue, me["game"])
+                if i is None and j is None:
+                    st.error("你在這間房（房內和排隊）找不到這個 ID")
                 else:
-                    st.error("密碼不符合，無法退出")
+                    st.session_state["exit_pending"] = True
+                    st.rerun()
 
-        # ---------- 修改 / 延長 ----------
+        if st.session_state.get("exit_pending"):
+            target = None
+            for lst in (room, queue):
+                for x in (me["baha"], me["game"]):
+                    k = _find(lst, x)
+                    if k is not None and not target:
+                        target = lst[k]
+            in_room = _find(room, me["baha"] or me["game"]) is not None
+            st.warning(f"確定要把「{my_id}」移出{'房間（立刻遞補下一位）' if in_room else '排隊'}嗎？")
+            c1, c2 = st.columns(2)
+            if c1.button("確定退出", type="primary"):
+                if target is not None and not _pw_ok(target, me["pw"], is_admin):
+                    st.error("密碼驗證失敗，無法退出")
+                else:
+                    i = _find(room, my_id)
+                    if i is not None:
+                        room.pop(i)
+                        dirty = True
+                        dirty |= refill(r, now)
+                    else:
+                        j = _find(queue, my_id)
+                        if j is not None:
+                            queue.pop(j)
+                            dirty = True
+                    if _transfer_owner(r):
+                        dirty = True
+                    del st.session_state["exit_pending"]
+                    st.toast("已退出")
+                    _touch(r, now)
+                    if save_state(state):        # 先存檔再重整，否則改動會丟掉
+                        st.rerun()
+            if c2.button("取消"):
+                del st.session_state["exit_pending"]
+                st.rerun()
+
+        # ---------- 修改 / 延長（限自己的紀錄，登入即識別） ----------
         st.markdown("---")
         st.header("✏️ 修改 / 延長")
-        mid = st.text_input("輸入你的巴哈ID或遊戲ID", key="mod_id")
-        mpw = st.text_input("你的4位密碼", max_chars=4, type="password", key="mod_pw")
-
-        mi = _find(room, mid)
-        m_src, m_target = ("room", room[mi]) if mi is not None else (None, None)
+        m_target, m_src = None, None
+        for lst, src in ((room, "room"), (queue, "queue")):
+            for x in (me["baha"], me["game"]):
+                k = _find(lst, x)
+                if k is not None and m_target is None:
+                    m_target, m_src = lst[k], src
         if m_target is None:
-            mj = _find(queue, mid)
-            if mj is not None:
-                m_src, m_target = "queue", queue[mj]
-
-        if mid.strip():
-            if m_target is None:
-                st.caption("你在這間房找不到（可能排在別間？）")
-            elif m_src == "room" and m_target.get("until") is None:
-                st.caption("🔒 鎖定成員，沒有持續時間")
-            elif m_src == "room":
-                rem = int((parse(m_target["until"]) - now).total_seconds() // 60)
-                st.caption(f"已在房間，剩餘 {rem} 分鐘｜排隊 {len(queue)} 人")
-            else:
-                st.caption(f"已在排隊，持續 {m_target.get('duration') or 60} 分鐘")
+            st.caption("你在這間房還沒有紀錄（可能排在別間？）")
+        elif m_src == "room" and m_target.get("until") is None:
+            st.caption("🔒 鎖定成員，沒有持續時間")
+        elif m_src == "room":
+            rem = int((parse(m_target["until"]) - now).total_seconds() // 60)
+            st.caption(f"已在車廂，剩餘 {rem} 分鐘｜排隊 {len(queue)} 人")
+        else:
+            st.caption(f"已在排隊，持續 {m_target.get('duration') or 60} 分鐘")
 
         ndur = st.number_input("縮短後的持續時間（分鐘）", min_value=10, value=None, key="mod_dur")
         if st.button("修改（只能縮短，冷卻 20 分）", key="mod_go", use_container_width=True):
-            is_admin = st.session_state.get("admin", False)
             if m_target is None:
-                st.error("找不到這個 ID")
-            elif not _pw_ok(m_target, mpw, is_admin):
-                st.error("密碼不符合")
+                st.error("找不到你的紀錄")
+            elif not _pw_ok(m_target, me["pw"], is_admin):
+                st.error("密碼驗證失敗")
             else:
                 le = m_target.get("last_edit")
                 if le and now - parse(le) < timedelta(minutes=20):
@@ -607,13 +718,12 @@ else:
                             st.rerun()
 
         if st.button("延長 1 小時（剩餘 10 分內且無人排隊）", key="ext_go", use_container_width=True):
-            is_admin = st.session_state.get("admin", False)
             if m_target is None:
-                st.error("找不到這個 ID")
-            elif not _pw_ok(m_target, mpw, is_admin):
-                st.error("密碼不符合")
+                st.error("找不到你的紀錄")
+            elif not _pw_ok(m_target, me["pw"], is_admin):
+                st.error("密碼驗證失敗")
             elif m_src != "room" or m_target.get("until") is None:
-                st.error("只有在房間、會換人的成員能延長")
+                st.error("只有在車廂、會換人的成員能延長")
             else:
                 rem = (parse(m_target["until"]) - now).total_seconds() / 60
                 if rem > 10:
@@ -629,65 +739,34 @@ else:
                     if save_state(state):
                         st.rerun()
 
-        if "exit_pending" in st.session_state:
-            t = st.session_state["exit_pending"]
-            in_room = _find(room, t) is not None
-            st.warning(f"確定要把「{t}」移出{'房間（立刻遞補下一位）' if in_room else '排隊'}嗎？")
-            c1, c2 = st.columns(2)
-            if c1.button("確定退出", type="primary"):
-                i = _find(room, t)
-                if i is not None:
-                    room.pop(i)
-                    dirty = True
-                    dirty |= refill(r, now)
+        # ---------- 車掌改名 ----------
+        owner_now = (r.get("owner") or "").casefold()
+        am_owner = me and any((x or "").strip().casefold() == owner_now and owner_now
+                              for x in (me["baha"], me["game"]))
+        if am_owner or is_admin:
+            st.markdown("---")
+            st.header("🏷 改房名（你是車掌）")
+            rn_name = st.text_input("新的房間名稱", key="rn_name")
+            if st.button("修改房名", key="rn_go", use_container_width=True):
+                owner_rec = None
+                for lst in (room, queue):
+                    k = _find(lst, r.get("owner"))
+                    if k is not None:
+                        owner_rec = lst[k]
+                        break
+                if not rn_name.strip():
+                    st.error("新房名要填")
+                elif rn_name.strip() == r["name"]:
+                    st.error("跟原本的房名一樣，不用改")
+                elif me and owner_rec is not None and not _pw_ok(owner_rec, me["pw"], is_admin):
+                    st.error("密碼驗證失敗")
                 else:
-                    j = _find(queue, t)
-                    if j is not None:
-                        queue.pop(j)
-                        dirty = True
-                if _transfer_owner(r):
+                    r["name"] = rn_name.strip()
                     dirty = True
-                del st.session_state["exit_pending"]
-                st.toast("已退出")
-                _touch(r, now)
-                if save_state(state):        # 先存檔再重整，否則改動會丟掉
-                    st.rerun()
-            if c2.button("取消"):
-                del st.session_state["exit_pending"]
-                st.rerun()
-
-        # ---------- 房主改名 ----------
-        st.markdown("---")
-        st.header("🏷 改房名（限房主）")
-        rn_name = st.text_input("新的房間名稱", key="rn_name")
-        rn_id = st.text_input("房主ID", key="rn_id")
-        rn_pw = st.text_input("房主的4位密碼", max_chars=4, type="password", key="rn_pw")
-        if st.button("修改房名", key="rn_go", use_container_width=True):
-            is_admin = st.session_state.get("admin", False)
-            owner_rec = None
-            for lst in (room, queue):
-                k = _find(lst, rn_id)
-                if k is not None:
-                    owner_rec = lst[k]
-                    break
-            is_owner = rn_id.strip().casefold() == (r.get("owner") or "").casefold()
-            if not rn_name.strip():
-                st.error("新房名要填")
-            elif not (is_owner or is_admin):
-                st.error("你不是這間房的房主")
-            elif rn_name.strip() == r["name"]:
-                st.error("跟原本的房名一樣，不用改")
-            elif owner_rec is None:
-                st.error("找不到你的排隊紀錄（房主要在房內或排隊中，用排隊時的密碼驗證）")
-            elif not _pw_ok(owner_rec, rn_pw, is_admin):
-                st.error("密碼不符合（要用排隊時設定的 4 位密碼）")
-            else:
-                r["name"] = rn_name.strip()
-                dirty = True
-                _touch(r, now)
-                st.toast("房名已修改")
-                if save_state(state):
-                    st.rerun()
+                    _touch(r, now)
+                    st.toast("房名已修改")
+                    if save_state(state):
+                        st.rerun()
 
         # ---------- 後門管理面板 ----------
         if st.session_state.get("admin"):
