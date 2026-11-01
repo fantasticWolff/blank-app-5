@@ -251,42 +251,57 @@ else:
 
 # ---------- 留言板 ----------
 msgs = state.setdefault("messages", [])
-st.subheader(f"💬 留言板（{len(msgs)} 則）")
-if msgs:
-    for m in reversed(msgs):
-        tag = f"　↩ 回覆 #{m['reply_to']}" if m.get("reply_to") else ""
-        st.markdown(f"**#{m['no']}　{m['name']}**{tag}　—　{fmt(m['ts'])}  \n{m['text']}")
-else:
+my_id = (st.session_state.get("sb_baha") or st.session_state.get("sb_game") or "").strip()
+
+st.subheader(f"💬 留言板（{len(msgs)} 則）" if msgs else "💬 留言板")
+if not msgs:
     st.caption("還沒有留言")
 
+for m in reversed(msgs):
+    tag = f"　↩ 回覆 #{m['reply_to']}" if m.get("reply_to") else ""
+    c1, c2 = st.columns([0.92, 0.08])
+    c1.markdown(f"**#{m['no']}　{m['name']}**{tag}　—　{fmt(m['ts'])}  \n{m['text']}")
+    if c2.button("↩", key=f"reply_{m['no']}", help=f"回覆 #{m['no']}"):
+        st.session_state["reply_to"] = m["no"]     # 點選回覆，像 YouTube
+        st.rerun()
+
+reply_to = st.session_state.get("reply_to", 0)
+if reply_to:
+    rc1, rc2 = st.columns([0.6, 0.4])
+    rc1.caption(f"↩ 正在回覆 #{reply_to}")
+    if rc2.button("❌ 取消回覆", key="cancel_reply"):
+        st.session_state["reply_to"] = 0
+        st.rerun()
+
+label = f"留言內容（以「{my_id}」名義，上限 500 字）" if my_id else "留言內容（上限 500 字）"
 with st.form("msg_form", border=True):
-    m_name = st.text_input("你的ID（巴哈或遊戲ID）")
-    m_reply = st.number_input("回覆哪一則（填留言編號，0 = 不回覆）", min_value=0, value=0, step=1)
-    m_text = st.text_area("留言內容（上限 500 字）", max_chars=500)
+    m_text = st.text_area(label, max_chars=500)
     if st.form_submit_button("留言 💬", type="primary", use_container_width=True):
-        if not m_name.strip() or not m_text.strip():
-            st.error("ID 和內容都要填")
-        elif m_reply and not any(x["no"] == m_reply for x in msgs):
-            st.error(f"找不到 #{m_reply} 這則留言")
+        if not my_id:
+            st.error("請先在左側填 巴哈ID 或 遊戲ID")
+        elif not m_text.strip():
+            st.error("內容要填")
         else:
             msgs.append({
                 "no": msgs[-1]["no"] + 1 if msgs else 1,
-                "name": m_name.strip(),
-                "reply_to": m_reply or None,
+                "name": my_id,                     # 名義直接用左側 ID
+                "reply_to": reply_to or None,
                 "text": m_text.strip(),
                 "ts": now.isoformat(),
             })
             del msgs[:len(msgs) - 100]          # 最多保留 100 則
+            st.session_state["reply_to"] = 0
             dirty = True
             st.toast("已留言！")
 
 # ---------- 側邊欄：排隊表單 / 退出 / 管理 ----------
 with st.sidebar:
+    baha = st.text_input("巴哈ID", key="sb_baha")
+    game = st.text_input("遊戲ID", key="sb_game")
+    st.caption("排隊與留言板共用這兩個 ID")
     st.header("✍️ 加入排隊")
     when = st.selectbox("希望開始時間", ["現在馬上排", "指定時間（最多提前 2 小時）"])
     with st.form("join_form", border=True):
-        baha = st.text_input("巴哈ID（必填其一）")
-        game = st.text_input("遊戲ID（必填其一）")
         pw = st.text_input("4位密碼（退出時必須相同）", max_chars=4, type="password")
         st.caption("一般玩家所有欄位都要填（沒填會跳警告）；特別名單只需 ID＋密碼")
         score = st.number_input("隊伍分數", min_value=0, value=0)
