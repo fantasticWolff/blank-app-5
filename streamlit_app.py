@@ -159,7 +159,7 @@ T = {
     "vote_cleared": "已取消我的票",
     "songs_empty": "還沒有人點歌，來當第一個！",
     "pin_song": "精選",
-    "f_cond_dur": "車掌多久換人（分鐘，留空＝車掌不換）",
+    "f_cond_dur": "多久換一次乘客（分鐘，留空＝用乘客自填時間）",
     "wait_mode_ck": "等待模式（乘客只能排隊，發車後依排序入座）",
     "btn_depart": "🚀 發車（依排序入座）",
     "wait_flag": "｜⏸ 等待模式中（發車後才入座）",
@@ -344,7 +344,7 @@ T = {
     "vote_cleared": "取消しました",
     "songs_empty": "まだ誰も曲を追加していません！",
     "pin_song": "ピックアップ",
-    "f_cond_dur": "車掌の交代間隔（分、未入力＝交代なし）",
+    "f_cond_dur": "乗客の交代間隔（分、未入力＝各自の設定）",
     "wait_mode_ck": "待機モード（乗客は待機のみ、発車後に順番に着席）",
     "btn_depart": "🚀 出発（順番に着席）",
     "wait_flag": "｜⏸ 待機モード（発車後に着席）",
@@ -529,7 +529,7 @@ T = {
     "vote_cleared": "Vote cancelled",
     "songs_empty": "No songs yet — be the first!",
     "pin_song": "pickup",
-    "f_cond_dur": "Conductor rotation (minutes, blank = never)",
+    "f_cond_dur": "Passenger rotation (minutes, blank = each player's own setting)",
     "wait_mode_ck": "Waiting mode (passengers queue only; board by order on departure)",
     "btn_depart": "🚀 Depart (board by order)",
     "wait_flag": " | Waiting mode (board after departure)",
@@ -714,7 +714,7 @@ T = {
     "vote_cleared": "Pilihan dibatalkan",
     "songs_empty": "Belum ada lagu — jadilah yang pertama!",
     "pin_song": "pickup",
-    "f_cond_dur": "Rotasi kondektur (menit, kosong = tidak berganti)",
+    "f_cond_dur": "Rotasi penumpang (menit, kosong = pengaturan masing-masing)",
     "wait_mode_ck": "Mode tunggu (penumpang hanya antre; naik sesuai urutan saat keberangkatan)",
     "btn_depart": "🚀 Berangkat (naik sesuai urutan)",
     "wait_flag": " | Mode tunggu (naik setelah keberangkatan)",
@@ -1047,9 +1047,11 @@ def refill(r, now):
         if p.get("prio", 3) <= 2:                 # p1/p2 入房即鎖定，不換人
             p["until"] = None
         else:
-            d = p.get("duration") or 60          # 沒填 = 60
-            if d > 60:
-                d = 60
+            d = r.get("seat_minutes")            # 車掌指定 → 全車統一換人週期
+            if d is None:
+                d = p.get("duration") or 60       # 沒指定 → 用乘客自填
+                if d > 60:
+                    d = 60
             p["until"] = (now + timedelta(minutes=max(10, d))).isoformat()
         room.append(p)
         dirty = True
@@ -1413,25 +1415,21 @@ if rid is None:
                 nid = "r_" + secrets.token_hex(3)
                 ts = now.isoformat()
                 me_salt = secrets.token_hex(8)
-                cond_until = None
-                if cond_dur is not None:                 # 車掌自選換人時間（留空＝鎖定）
-                    cond_until = (now + timedelta(minutes=cond_dur)).isoformat()
-                me_rec = {                              # 車掌自動入座第 1 位
+                me_rec = {                              # 車掌自動入座第 1 位、鎖定不換人
                     "baha_id": me["baha"], "game_id": me["game"],
                     "prio": resolve_prio(me["baha"], me["game"]),
                     "score": None, "fire": None,
                     "pw_salt": me_salt,
                     "pw_hash": _hash_pw(me["pw"], me_salt),
-                    "start_pref": None, "duration": cond_dur or 60,
-                    "reg_at": ts, "sat_at": ts, "until": cond_until,
+                    "start_pref": None, "duration": 60,
+                    "reg_at": ts, "sat_at": ts, "until": None,
                 }
-                if cond_until:
-                    me_rec["lock_off"] = True
                 state["rooms"][nid] = {
                     "name": new_name.strip(),
                     "owner": me["baha"] or me["game"],
                     "room": [me_rec], "queue": [], "messages": [],
                     "active": ts, "created": ts, "waiting": bool(wait_ck),
+                    "seat_minutes": cond_dur,     # 車掌指定乘客換人週期
                 }
                 if save_state(state):
                     st.query_params["room"] = nid
@@ -1927,9 +1925,11 @@ else:
                     if in_p.get("prio", 3) <= 2:
                         in_p["until"] = None
                     else:
-                        d = in_p.get("duration") or 60
-                        if d > 60:
-                            d = 60
+                        d = r.get("seat_minutes")           # 房間統一週期優先
+                        if d is None:
+                            d = in_p.get("duration") or 60
+                            if d > 60:
+                                d = 60
                         in_p["until"] = (now + timedelta(minutes=max(10, d))).isoformat()
                     idx = min(oi, len(room))
                     room.insert(idx, in_p)
