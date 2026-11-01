@@ -166,7 +166,10 @@ def refill(state, now):
             break
         p = queue.pop(idx)
         p["sat_at"] = now.isoformat()
-        p["until"] = (now + timedelta(minutes=max(10, min(p.get("duration") or 60, 60)))).isoformat()
+        d = p.get("duration") or 60               # 沒填 = 60
+        if p.get("prio", 3) >= 3 and d > 60:       # 一般玩家上限 60；p1/p2 不限
+            d = 60
+        p["until"] = (now + timedelta(minutes=max(10, d))).isoformat()
         room.append(p)
         dirty = True
     return dirty
@@ -220,7 +223,7 @@ if queue:
         "隊伍分數": p.get("score") if p.get("score") is not None else "—",
         "火消耗": p.get("fire") if p.get("fire") is not None else "—",
         "希望開始": fmt(p.get("start_pref")),
-        "持續(分)": p.get("duration", "—"), "註冊時間": fmt(p["reg_at"]),
+        "持續(分)": p.get("duration") if p.get("duration") is not None else "—", "註冊時間": fmt(p["reg_at"]),
     } for i, p in enumerate(sorted(queue, key=_qkey))]
     st.dataframe(qrows, use_container_width=True, hide_index=True)
 else:
@@ -238,8 +241,8 @@ with st.sidebar:
         score = st.number_input("隊伍分數", min_value=0, value=0)
         fire = st.number_input("火消耗", min_value=0, value=0)
         pref_t = st.time_input("指定時間", value=None, disabled=(when == "現在馬上排"))
-        dur = st.number_input("持續時間（分鐘，上限 60）",
-                              min_value=10, max_value=60, value=30, step=5)
+        dur = st.number_input("持續時間（分鐘，可不填；一般玩家上限 60）",
+                              min_value=10, value=None, step=5, placeholder="60")
         ok = st.form_submit_button("排隊 🎮", type="primary", use_container_width=True)
 
     if ok:
@@ -268,13 +271,17 @@ with st.sidebar:
                         st.error("最多只能提前 2 小時預約！")
                         st.stop()
                     start_pref = cand.isoformat()
+                duration = dur
+                if duration is not None and prio >= 3 and duration > 60:
+                    st.error("一般玩家持續時間上限 60 分鐘！")
+                    st.stop()
                 queue.append({
                     "baha_id": baha, "game_id": game, "prio": prio,
                     "score": score or None,       # 0 = 沒填 → 不顯示
                     "fire": fire or None,
                     "pw_hash": _sha(pw),
                     "start_pref": start_pref,
-                    "duration": dur,
+                    "duration": duration,
                     "reg_at": now.isoformat(),
                 })
                 queue.sort(key=_qkey)
