@@ -713,7 +713,8 @@ try:
 except Exception:
     PRIORITY_IDS = []        # 沒設定或格式錯 → 沒有特別名單，大家一律一般玩家
 
-st.set_page_config(page_title="Hololive dreams", page_icon="🎮", layout="wide")
+st.set_page_config(page_title="Hololive dreams", page_icon="🎮", layout="wide",
+                  initial_sidebar_state="expanded")
 
 # 背景圖：遮罩跟著 light / dark 主題切換（數字越小圖越清楚）
 BG_URL = "https://truth.bahamut.com.tw/s01/202607/forum/84454/f2c592e75c79b276e76d85beb4ea4927.JPG"
@@ -724,14 +725,14 @@ st.markdown(f"""
                 url("{BG_URL}") center center / cover fixed no-repeat !important;
 }}
 .stDeployButton, [data-testid="stDeployButton"], [data-testid="stStatusWidget"] {{
-    display: none !important;
+    display: none !important;        # 只藏 Deploy／狀態（會連到 GitHub）
 }}
-[data-testid="stToolbar"], #MainMenu, [data-testid="stMainMenu"] {{
-    display: none !important;
+[data-testid="stMainMenu"], #MainMenu {{
+    display: none !important;        # 只藏漢堡選單；toolbar 本體留著（側欄展開鈕在裡面）
 }}
 [data-testid="collapsedControl"], [data-testid="stSidebarCollapseButton"],
 [data-testid="stSidebarCollapsedControl"] {{
-    display: flex !important;      /* 側欄縮起時的展開鈕：必須看得到 */
+    display: flex !important;        # 側欄縮起時的展開鈕：必須看得到
 }}
 [data-testid="stSidebar"] {{
     background-color: rgba(255, 255, 255, 0.88) !important;
