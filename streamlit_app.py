@@ -100,7 +100,8 @@ T = {
     "err_dup_other": "你已經在「{x}」了，一次只能排一間（先退出再來）",
     "err_missing": "欄位沒填完：{x}",
     "err_too_far": "最多只能提前 2 小時預約！",
-    "err_dur_cap": "持續時間上限 60 分鐘！",
+    "err_dur_cap": "持續時間不能超過這間房的上限 {n} 分鐘！",
+    "seat_rule": "｜🔁 乘客每 {n} 分鐘換人",
     "joined": "已加入排隊！",
     "err_login_first": "請先登入",
     "err_login_queue": "請先登入再排隊",
@@ -289,7 +290,8 @@ T = {
     "err_dup_other": "「{x}」に既にいます。1度に1ルームのみ（先に退出してください）",
     "err_missing": "未入力の項目：{x}",
     "err_too_far": "予約は2時間前までです！",
-    "err_dur_cap": "持続時間は60分までです！",
+    "err_dur_cap": "持続時間はこのルームの上限 {n} 分までです！",
+    "seat_rule": "｜🔁 乗客は {n} 分ごとに交代",
     "joined": "待機に並びました！",
     "err_login_first": "先にログインしてください",
     "err_login_queue": "ログイン後に待機できます",
@@ -478,7 +480,8 @@ T = {
     "err_dup_other": "You're already in \"{x}\" — one room at a time (leave first)",
     "err_missing": "Missing fields: {x}",
     "err_too_far": "You can book at most 2 hours ahead!",
-    "err_dur_cap": "Duration max is 60 minutes!",
+    "err_dur_cap": "Duration can't exceed this room's limit of {n} minutes!",
+    "seat_rule": " | 🔁 Passengers rotate every {n} min",
     "joined": "Queued!",
     "err_login_first": "Please log in first",
     "err_login_queue": "Log in to queue",
@@ -667,7 +670,8 @@ T = {
     "err_dup_other": "Kamu sudah di \"{x}\" — hanya satu ruangan (keluar dulu)",
     "err_missing": "Belum diisi: {x}",
     "err_too_far": "Pemesanan maksimal 2 jam ke depan!",
-    "err_dur_cap": "Pemain reguler maksimal 60 menit!",
+    "err_dur_cap": "Durasi tidak boleh melebihi batas {n} menit di ruangan ini!",
+    "seat_rule": " | 🔁 Penumpang berganti tiap {n} menit",
     "joined": "Masuk antrean!",
     "err_login_first": "Silakan login dulu",
     "err_login_queue": "Login dulu untuk antre",
@@ -1084,11 +1088,10 @@ def refill(r, now):
         if p.get("prio", 3) <= 2:                 # p1/p2 入房即鎖定，不換人
             p["until"] = None
         else:
-            d = r.get("seat_minutes")            # 車掌指定 → 全車統一換人週期
-            if d is None:
-                d = p.get("duration") or 60       # 沒指定 → 用乘客自填
-                if d > 60:
-                    d = 60
+            d = p.get("duration") or 60                  # 用乘客自填（沒填 60）
+            cap = r.get("seat_minutes")                    # 車掌指定 → 上限照房規
+            if d > (cap if cap is not None else 60):
+                d = cap if cap is not None else 60
             p["until"] = (now + timedelta(minutes=max(10, d))).isoformat()
         room.append(p)
         dirty = True
@@ -1411,6 +1414,7 @@ if rid is None:
                    n=len(r["room"]), cap=ROOM_SIZE, q=len(r["queue"]),
                    m=len(r.get("messages", [])))
                 + (_t("wait_flag") if r.get("waiting") else "")
+                + (_t("seat_rule", n=r["seat_minutes"]) if r.get("seat_minutes") else "")
                 + (_t("iam_here") if my_here else ""))
         if is_admin:
             c1, c2, c3 = st.columns([0.72, 0.16, 0.12])
@@ -1535,7 +1539,9 @@ else:
             st.rerun()
 
     st.caption(_t("room_cap", owner=r.get("owner") or "—", n=len(room), cap=ROOM_SIZE)
-               + (_t("wait_flag") if r.get("waiting") else "") + _t("announce"))
+               + (_t("wait_flag") if r.get("waiting") else "")
+               + (_t("seat_rule", n=r["seat_minutes"]) if r.get("seat_minutes") else "")
+               + _t("announce"))
 
     if am_owner or is_admin:                        # 等待模式 / 發車（車掌或 admin）
         if r.get("waiting"):
@@ -1763,8 +1769,9 @@ else:
                             st.stop()
                         start_pref = cand.isoformat()
                     duration = dur
-                    if duration is not None and prio >= 3 and duration > 60:
-                        st.error(_t("err_dur_cap"))
+                    _cap = r.get("seat_minutes") or 60      # 車掌指定 → 上限照房規
+                    if duration is not None and prio >= 3 and duration > _cap:
+                        st.error(_t("err_dur_cap", n=_cap))
                         st.stop()
                     pw_salt_new = secrets.token_hex(8)
                     queue.append({
@@ -1990,11 +1997,10 @@ else:
                     if in_p.get("prio", 3) <= 2:
                         in_p["until"] = None
                     else:
-                        d = r.get("seat_minutes")           # 房間統一週期優先
-                        if d is None:
-                            d = in_p.get("duration") or 60
-                            if d > 60:
-                                d = 60
+                        d = in_p.get("duration") or 60
+                        cap = r.get("seat_minutes")           # 房規上限
+                        if d > (cap if cap is not None else 60):
+                            d = cap if cap is not None else 60
                         in_p["until"] = (now + timedelta(minutes=max(10, d))).isoformat()
                     idx = min(oi, len(room))
                     room.insert(idx, in_p)
