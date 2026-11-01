@@ -143,13 +143,14 @@ T = {
     "depart_word": "發車",
     "depart_done": "發車時間已設定",
     "depart_cleared": "已取消排定，立即發車",
-    "songs_h": "🎵 大家想玩的歌",
+    "songs_h": "🎵 想玩的歌（湊滿 5 人揪房）",
+    "songs_cap": "這裡也是排隊區：點你想玩的歌，某首歌滿 5 人就可以直接開房、不用等人。加入車廂或排隊後，你的選擇會自動取消；每人最多選 2 首。",
     "f_new_song": "歌名",
     "add_song_btn": "＋ 新增並投它一票",
     "vote_btn": "我想玩",
     "cancel_vote": "★ 我的選擇（點一下取消）",
     "song_n": "{n} 人",
-    "err_one_song": "每人只能選一首（先取消目前的）",
+    "err_one_song": "每人最多選 2 首（先取消目前的）",
     "err_song_name": "歌名要填",
     "err_song_dup": "這首已經在列表上，直接按「我想玩」就好",
     "song_added": "已新增＋投一票",
@@ -320,13 +321,14 @@ T = {
     "depart_word": "発車",
     "depart_done": "発車時刻を設定しました",
     "depart_cleared": "取消しました（すぐ発車）",
-    "songs_h": "🎵 みんながやりたい曲",
+    "songs_h": "🎵 やりたい曲（5人揃えば即開房）",
+    "songs_cap": "ここも待機所です：やりたい曲を選ぶと、1曲5人揃ったら待たずにルームを作れます。乗車・待機に入ると選択は自動解除。1人2曲まで。",
     "f_new_song": "曲名",
     "add_song_btn": "＋ 新規追加して投票",
     "vote_btn": "プレイしたい",
     "cancel_vote": "★ 選択中（タップで取消）",
     "song_n": "{n}人",
-    "err_one_song": "1人1曲まで（先に現在の票を取消）",
+    "err_one_song": "1人2曲まで（先にどれか取消）",
     "err_song_name": "曲名を入力してください",
     "err_song_dup": "この曲は既にあります。「プレイしたい」を押してください",
     "song_added": "追加して投票しました",
@@ -497,13 +499,14 @@ T = {
     "depart_word": "departs",
     "depart_done": "Departure time set",
     "depart_cleared": "Schedule cleared — departs now",
-    "songs_h": "🎵 Songs everyone wants to play",
+    "songs_h": "🎵 Songs to team up （5 players → open a room）",
+    "songs_cap": "This is also a match queue: pick songs you want to play. When a song reaches 5 players, you can open its room right away with no waiting. Joining a cabin or a room's queue removes your picks automatically. Max 2 songs per player.",
     "f_new_song": "Song title",
     "add_song_btn": "＋ Add & vote",
     "vote_btn": "I want to play",
     "cancel_vote": "★ my pick (click to cancel)",
     "song_n": "{n} players",
-    "err_one_song": "One pick per player (cancel your current one first)",
+    "err_one_song": "Max 2 picks per player (cancel one first)",
     "err_song_name": "Song title required",
     "err_song_dup": "That song already exists — just press \"I want to play\"",
     "song_added": "Added & voted",
@@ -674,13 +677,14 @@ T = {
     "depart_word": "berangkat",
     "depart_done": "Waktu keberangkatan diatur",
     "depart_cleared": "Jadwal dibatalkan — langsung berangkat",
-    "songs_h": "🎵 Lagu yang ingin dimainkan",
+    "songs_h": "🎵 Lagu untuk tim（5 orang → buka ruang）",
+    "songs_cap": "Ini juga daftar tunggu: pilih lagu yang ingin kamu mainkan. Saat satu lagu mencapai 5 orang, kamu bisa langsung membuka ruangnya tanpa menunggu. Masuk kursi/antrean otomatis membatalkan pilihanmu. Maks 2 lagu per orang.",
     "f_new_song": "Judul lagu",
     "add_song_btn": "＋ Tambah & pilih",
     "vote_btn": "Aku mau main",
     "cancel_vote": "★ pilihanku (klik untuk batal)",
     "song_n": "{n} orang",
-    "err_one_song": "Satu pilihan per orang (batalkan dulu)",
+    "err_one_song": "Maks 2 pilihan per orang (batalkan dulu)",
     "err_song_name": "Judul lagu wajib diisi",
     "err_song_dup": "Lagu itu sudah ada — tekan \"Aku mau main\" saja",
     "song_added": "Ditambah & dipilih",
@@ -1062,9 +1066,10 @@ def _reconcile_songs(state, now):
         sg = state["songs"][sid]
         sg.setdefault("votes", {})
         for vkey in list(sg["votes"]):              # 已上車 → 移除計數
-            seated = any(_find(r2["room"], vkey) is not None
+            ingame = any(_find(r2["room"], vkey) is not None or
+                         _find(r2["queue"], vkey) is not None
                          for r2 in state["rooms"].values())
-            if seated and resolve_prio(vkey, vkey) > 1:   # p1 的票不受上車影響
+            if ingame and resolve_prio(vkey, vkey) > 1:   # 上車或排隊 → 移除計數（p1 除外）
                 del sg["votes"][vkey]
                 changed = True
         if not sg["votes"]:
@@ -1315,23 +1320,26 @@ if rid is None:
                 st.query_params["room"] = rid2
                 st.rerun()
 
-    # ---------- 歌曲欄位（乘客想玩什麼） ----------
+    # ---------- 歌曲欄位（揪歌排隊：湊滿 5 人開房） ----------
     st.subheader(_t("songs_h"))
+    st.caption(_t("songs_cap"))
     songs = state.setdefault("songs", {})
     my_id = _my_baha()
     if not songs:
         st.caption(_t("songs_empty"))
-    my_song = next((sid for sid, sg in songs.items()
-                    if my_id and my_id in sg.get("votes", {})), None)
+    my_sids = [sid for sid, sg in songs.items()
+               if my_id and my_id in sg.get("votes", {})]
     for sid, sg in sorted(list(songs.items()),
                           key=lambda kv: (-len(kv[1].get("votes", {})), kv[1]["name"].casefold())):
         mine = my_id and my_id in sg.get("votes", {})
+        n_v = len(sg.get("votes", {}))
+        rocket = "　🚀" if n_v >= 5 else ""        # 滿 5 人：可揪房
         if is_admin:
             c1, c2, c3 = st.columns([0.66, 0.22, 0.12])
         else:
             c1, c2 = st.columns([0.7, 0.3])
             c3 = None
-        c1.markdown(f"🎵 **{sg['name']}**　{_t('song_n', n=len(sg.get('votes', {})))}{'★' if mine else ''}")
+        c1.markdown(f"🎵 **{sg['name']}**　{_t('song_n', n=n_v)}{'★' if mine else ''}{rocket}")
         if not me:
             pass
         elif mine:
@@ -1341,7 +1349,7 @@ if rid is None:
                 st.toast(_t("vote_cleared"))
         else:
             if c2.button(_t("vote_btn"), key=f"sv_{sid}", use_container_width=True):
-                if my_song is not None and not is_p1:      # p1 不受一次一首限制
+                if len(my_sids) >= 2 and not is_p1:      # 每人最多 2 首（p1 不限）
                     st.error(_t("err_one_song"))
                 else:
                     sg["votes"][my_id] = {"at": now.isoformat()}
@@ -1355,13 +1363,13 @@ if rid is None:
     with st.form("add_song", border=True):
         nsong = st.text_input(_t("f_new_song"))
         if st.form_submit_button(_t("add_song_btn"), type="primary", use_container_width=True):
-            my_song2 = next((sid for sid, sg in songs.items()
-                             if my_id and my_id in sg.get("votes", {})), None)
+            my_cnt2 = sum(1 for sg in songs.values()
+                          if my_id and my_id in sg.get("votes", {}))
             if not me:
                 st.error(_t("err_login_first"))
             elif not nsong.strip():
                 st.error(_t("err_song_name"))
-            elif my_song2 is not None and not is_p1:
+            elif my_cnt2 >= 2 and not is_p1:
                 st.error(_t("err_one_song"))
             elif any(sg["name"].casefold() == nsong.strip().casefold()
                      for sg in songs.values()):
