@@ -125,6 +125,24 @@ T = {
     "adm_set_btn": "設定剩餘時間",
     "adm_set_ok": "已設定",
     "adm_set_not_found": "所有房間都找不到這個 ID",
+    "swap_h": "🔄 替換成員（座位的人下車，你指定的排隊者上車）",
+    "f_swap_out": "下車的成員ID",
+    "f_swap_in": "上車的排隊者ID",
+    "swap_btn": "替換",
+    "swap_ok": "已替換成員",
+    "err_swap_out": "座位上找不到這個 ID",
+    "err_swap_in": "這間房的排隊中找不到這個 ID",
+    "err_swap_self": "兩個 ID 不能相同",
+    "f_depart": "預計發車時間（可不填＝立即發車）",
+    "depart_set_h": "🚃 發車時間設定（你是車掌）",
+    "f_depart_edit": "新的發車時間",
+    "set_depart": "設定發車時間",
+    "clear_depart": "取消排定（立即發車）",
+    "depart_cur": "目前排定發車：{t}",
+    "err_pick_time": "請選擇發車時間",
+    "depart_word": "發車",
+    "depart_done": "發車時間已設定",
+    "depart_cleared": "已取消排定，立即發車",
     "mod_btn": "修改（只能縮短，冷卻 20 分）",
     "ext_btn": "延長 1 小時（剩餘 10 分內且無人排隊）",
     "err_cd": "修改冷卻中，請 {n} 分鐘後再試",
@@ -271,6 +289,24 @@ T = {
     "adm_set_btn": "残り時間を設定",
     "adm_set_ok": "設定しました",
     "adm_set_not_found": "全ルームでこのIDが見つかりません",
+    "swap_h": "🔄 メンバー交代（乗客降車、指定の待機者が乗車）",
+    "f_swap_out": "降車するメンバーID",
+    "f_swap_in": "乗車する待機者ID",
+    "swap_btn": "交代",
+    "swap_ok": "交代しました",
+    "err_swap_out": "座席にこのIDがいません",
+    "err_swap_in": "このルームの待機にこのIDがいません",
+    "err_swap_self": "同じIDは指定できません",
+    "f_depart": "発車予定時刻（未入力＝すぐ発車）",
+    "depart_set_h": "🚃 百車時刻設定（車掌）",
+    "f_depart_edit": "新しい発車時刻",
+    "set_depart": "発車時刻を設定",
+    "clear_depart": "設定取消（すぐ発車）",
+    "depart_cur": "現在の発車予定：{t}",
+    "err_pick_time": "時刻を選んでください",
+    "depart_word": "発車",
+    "depart_done": "発車時刻を設定しました",
+    "depart_cleared": "取消しました（すぐ発車）",
     "mod_btn": "変更（短縮のみ、CD20分）",
     "ext_btn": "1時間延長（残り10分以内＆待機なし）",
     "err_cd": "変更のクールダウン中、あと{n}分",
@@ -417,6 +453,24 @@ T = {
     "adm_set_btn": "Set remaining time",
     "adm_set_ok": "Set",
     "adm_set_not_found": "ID not found in any room",
+    "swap_h": "🔄 Swap member (the seated one leaves, a queued player you choose takes the seat)",
+    "f_swap_out": "Member ID leaving the seat",
+    "f_swap_in": "Queued player ID taking the seat",
+    "swap_btn": "Swap",
+    "swap_ok": "Member swapped",
+    "err_swap_out": "That ID isn't seated",
+    "err_swap_in": "That ID isn't in this room's queue",
+    "err_swap_self": "The two IDs can't be the same",
+    "f_depart": "Scheduled departure (blank = departs now)",
+    "depart_set_h": "🚃 Departure time (conductor)",
+    "f_depart_edit": "New departure time",
+    "set_depart": "Set departure",
+    "clear_depart": "Cancel schedule (depart now)",
+    "depart_cur": "Scheduled departure: {t}",
+    "err_pick_time": "Pick a departure time",
+    "depart_word": "departs",
+    "depart_done": "Departure time set",
+    "depart_cleared": "Schedule cleared — departs now",
     "mod_btn": "Modify (shorten only, 20-min cooldown)",
     "ext_btn": "Extend 1 hour (≤10 min left & nobody queuing)",
     "err_cd": "Modification on cooldown, retry in {n} min",
@@ -563,6 +617,24 @@ T = {
     "adm_set_btn": "Atur sisa waktu",
     "adm_set_ok": "Diatur",
     "adm_set_not_found": "ID tidak ditemukan di semua ruangan",
+    "swap_h": "🔄 Tukar anggota (yang duduk turun, pilihan antrean naik)",
+    "f_swap_out": "ID anggota yang turun",
+    "f_swap_in": "ID antrean yang naik",
+    "swap_btn": "Tukar",
+    "swap_ok": "Anggota ditukar",
+    "err_swap_out": "ID itu tidak sedang duduk",
+    "err_swap_in": "ID itu tidak ada di antrean ruangan ini",
+    "err_swap_self": "Kedua ID tidak boleh sama",
+    "f_depart": "Jadwal keberangkatan (kosong = langsung berangkat)",
+    "depart_set_h": "🚃 Waktu keberangkatan (kondektur)",
+    "f_depart_edit": "Waktu keberangkatan baru",
+    "set_depart": "Atur keberangkatan",
+    "clear_depart": "Batalkan jadwal (langsung berangkat)",
+    "depart_cur": "Terjadwal: {t}",
+    "err_pick_time": "Pilih waktu keberangkatan",
+    "depart_word": "berangkat",
+    "depart_done": "Waktu keberangkatan diatur",
+    "depart_cleared": "Jadwal dibatalkan — langsung berangkat",
     "mod_btn": "Ubah (hanya memperpendek; jeda 20 menit)",
     "ext_btn": "Perpanjang 1 jam (sisa ≤10 mnt & tanpa antrean)",
     "err_cd": "Jeda perubahan, coba lagi dalam {n} mnt",
@@ -656,6 +728,10 @@ st.markdown(f"""
 }}
 [data-testid="stToolbar"], #MainMenu, [data-testid="stMainMenu"] {{
     display: none !important;
+}}
+[data-testid="collapsedControl"], [data-testid="stSidebarCollapseButton"],
+[data-testid="stSidebarCollapsedControl"] {{
+    display: flex !important;      /* 側欄縮起時的展開鈕：必須看得到 */
 }}
 [data-testid="stSidebar"] {{
     background-color: rgba(255, 255, 255, 0.88) !important;
@@ -1608,6 +1684,40 @@ else:
                     _touch(tgt_room, now)
                     dirty = True
                     st.toast(_t("adm_set_ok"))
+                    if save_state(state):
+                        st.rerun()
+
+            st.markdown("---")
+            st.caption(_t("swap_h"))
+            so_id = st.text_input(_t("f_swap_out"), key="swap_out")
+            si_id = st.text_input(_t("f_swap_in"), key="swap_in")
+            if st.button(_t("swap_btn"), key="swap_go", use_container_width=True):
+                oi = _find(room, so_id) if so_id.strip() else None
+                ij = _find(queue, si_id) if si_id.strip() else None
+                if so_id.strip() and so_id.strip().casefold() == si_id.strip().casefold():
+                    st.error(_t("err_swap_self"))
+                elif not so_id.strip() or oi is None:
+                    st.error(_t("err_swap_out"))
+                elif not si_id.strip() or ij is None:
+                    st.error(_t("err_swap_in"))
+                else:
+                    room.pop(oi)                          # 下車
+                    in_p = queue.pop(ij)                   # 上車，坐同一個座位
+                    in_p["sat_at"] = now.isoformat()
+                    if in_p.get("prio", 3) <= 2:
+                        in_p["until"] = None
+                    else:
+                        d = in_p.get("duration") or 60
+                        if d > 60:
+                            d = 60
+                        in_p["until"] = (now + timedelta(minutes=max(10, d))).isoformat()
+                    idx = min(oi, len(room))
+                    room.insert(idx, in_p)
+                    _transfer_owner(r)
+                    _ensure_conductor(r, now)
+                    _touch(r, now)
+                    dirty = True
+                    st.toast(_t("swap_ok"))
                     if save_state(state):
                         st.rerun()
 
