@@ -868,22 +868,25 @@ def _login_gate(state):
     me = _me()
     if me or st.session_state.get("admin"):
         return
-    _lang_widget(st, "lang_login")
     st.title("🎮 Hololive dreams " + _t("title_suffix"))
     st.caption(_t("announce"))
     st.subheader(_t("login_sub"))
     st.caption(_t("login_cap"))
-    with st.form("login_form", border=True):
-        lb = st.text_input(_t("col_baha"), key="lb")
-        lg = st.text_input(_t("col_game"), key="lg")
-        lpw = st.text_input(_t("f_pw"), max_chars=4, type="password", key="lpw")
-        ok = st.form_submit_button(_t("login_btn"), type="primary", use_container_width=True)
+    lb = st.text_input(_t("col_baha"), key="lb")
+    lg = st.text_input(_t("col_game"), key="lg")
+    lpw = st.text_input(_t("f_pw"), max_chars=4, type="password", key="lpw")
+    lg_col, ok_col = st.columns([0.6, 0.4])        # 語言在左、小顆登入鈕在右
+    _lang_widget(lg_col, "lang_login")
+    ok = ok_col.button(_t("login_btn"), type="primary")
     if ok:
         lb, lg = lb.strip(), lg.strip()
         if not lb and not lg:
             st.error(_t("err_need_id"))
         elif ADMIN_ID and (lb.casefold() == ADMIN_ID or lg.casefold() == ADMIN_ID):
             st.session_state["admin"] = True
+            st.session_state.pop("me", None)
+            if "room" in st.query_params:          # 統一導向列表頁（車掌/乘客）
+                del st.query_params["room"]
             st.toast(_t("admin_on"))
             st.rerun()
         elif len(lpw) != 4:
@@ -894,6 +897,8 @@ def _login_gate(state):
                 st.error(_t("err_pw_mismatch"))
             else:
                 st.session_state["me"] = {"baha": lb, "game": lg, "pw": lpw}
+                if "room" in st.query_params:      # 登入後一律導向列表頁（車掌/乘客）
+                    del st.query_params["room"]
                 st.toast(_t("welcome_prefix") + (lb or lg) + "！")
                 st.rerun()
     st.stop()
