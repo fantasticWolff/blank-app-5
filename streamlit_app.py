@@ -15,6 +15,7 @@ ROOM_SIZE = 5                # 每間房固定 5 人
 MAX_ROOMS = 20               # 最多 20 間
 MAX_AHEAD = timedelta(hours=2)          # 最多提前 2 小時預約
 ROOM_TTL = timedelta(hours=8)           # 8 小時無排隊且無任何變化 → 自動刪
+PIN_SID = "s_pickup"                    # 固定歌曲（精選／ピックアップ／pickup），永遠第一位
 
 # ---------------- 多語系 ----------------
 LANG_NAMES = {"zh": "中文", "ja": "日本語", "en": "English", "id": "Bahasa Indonesia"}
@@ -157,6 +158,7 @@ T = {
     "voted_ok": "已投給這首",
     "vote_cleared": "已取消我的票",
     "songs_empty": "還沒有人點歌，來當第一個！",
+    "pin_song": "精選",
     "mod_btn": "修改（只能縮短，冷卻 20 分）",
     "ext_btn": "延長 1 小時（剩餘 10 分內且無人排隊）",
     "err_cd": "修改冷卻中，請 {n} 分鐘後再試",
@@ -335,6 +337,7 @@ T = {
     "voted_ok": "投票しました",
     "vote_cleared": "取消しました",
     "songs_empty": "まだ誰も曲を追加していません！",
+    "pin_song": "ピックアップ",
     "mod_btn": "変更（短縮のみ、CD20分）",
     "ext_btn": "1時間延長（残り10分以内＆待機なし）",
     "err_cd": "変更のクールダウン中、あと{n}分",
@@ -513,6 +516,7 @@ T = {
     "voted_ok": "Voted",
     "vote_cleared": "Vote cancelled",
     "songs_empty": "No songs yet — be the first!",
+    "pin_song": "pickup",
     "mod_btn": "Modify (shorten only, 20-min cooldown)",
     "ext_btn": "Extend 1 hour (≤10 min left & nobody queuing)",
     "err_cd": "Modification on cooldown, retry in {n} min",
@@ -691,6 +695,7 @@ T = {
     "voted_ok": "Dipilih",
     "vote_cleared": "Pilihan dibatalkan",
     "songs_empty": "Belum ada lagu — jadilah yang pertama!",
+    "pin_song": "pickup",
     "mod_btn": "Ubah (hanya memperpendek; jeda 20 menit)",
     "ext_btn": "Perpanjang 1 jam (sisa ≤10 mnt & tanpa antrean)",
     "err_cd": "Jeda perubahan, coba lagi dalam {n} mnt",
@@ -1060,8 +1065,12 @@ def reconcile_all(state, now):
     return dirty
 
 def _reconcile_songs(state, now):
-    """歌曲清單：上車的人移除想玩計數；0 人持續 8 小時 → 自動刪歌"""
+    """歌曲清單：上車/排隊的人移除想玩計數；0 人持續 8 小時 → 自動刪歌（固定歌除外）"""
     changed = False
+    state.setdefault("songs", {})
+    if PIN_SID not in state["songs"]:              # 固定歌曲常駐
+        state["songs"][PIN_SID] = {"name": PIN_SID, "votes": {}, "zero_since": None}
+        changed = True
     for sid in list(state.get("songs", {})):
         sg = state["songs"][sid]
         sg.setdefault("votes", {})
@@ -1072,6 +1081,8 @@ def _reconcile_songs(state, now):
             if ingame and resolve_prio(vkey, vkey) > 1:   # 上車或排隊 → 移除計數（p1 除外）
                 del sg["votes"][vkey]
                 changed = True
+        if sid == PIN_SID:
+            continue                               # 固定歌：不刪、不記 0 人計時
         if not sg["votes"]:
             if not sg.get("zero_since"):
                 sg["zero_since"] = now.isoformat()
@@ -1248,41 +1259,71 @@ if rid is None:
     st.title("🎮 Hololive dreams " + _t("title_suffix"))
     st.caption(_t("rooms_caption", n=len(state["rooms"]), cap=MAX_ROOMS) + _t("announce"))
 
-    st.subheader(_t("new_room_h"))
-    st.caption(_t("new_room_cap"))
-    with st.form("new_room", border=True):
-        new_name = st.text_input(_t("f_room_name"))
-        if st.form_submit_button(_t("open_room_btn"), type="primary", use_container_width=True):
+    # ---------- 歌曲欄位（揪歌排隊：湊滿 5 人開房） ----------
+    st.subheader(_t("songs_h"))
+    st.caption(_t("songs_cap"))
+    songs = state.setdefault("songs", {})
+    my_id = _my_baha()
+    if not songs:
+        st.caption(_t("songs_empty"))
+    my_sids = [sid for sid, sg in songs.items()
+               if my_id and my_id in sg.get("votes", {})]
+    for sid, sg in sorted(list(songs.items()),
+                          key=lambda kv: (0 if kv[0] == PIN_SID else 1,        # 固定歌永遠第一
+                                          -len(kv[1].get("votes", {})),
+                                          kv[1]["name"].casefold())):
+        mine = my_id and my_id in sg.get("votes", {})
+        n_v = len(sg.get("votes", {}))
+        rocket = "　🚀" if n_v >= 5 else ""        # 滿 5 人：可揪房
+        s_name = _t("pin_song") if sid == PIN_SID else sg["name"]
+        if is_admin and sid != PIN_SID:
+            c1, c2, c3 = st.columns([0.66, 0.22, 0.12])
+        else:
+            c1, c2 = st.columns([0.7, 0.3])
+            c3 = None
+        c1.markdown(f"🎵 **{s_name}**　{_t('song_n', n=n_v)}{'★' if mine else ''}{rocket}")
+        if not me:
+            pass
+        elif mine:
+            if c2.button(_t("cancel_vote"), key=f"sv_{sid}", use_container_width=True):
+                del sg["votes"][my_id]
+                dirty = True
+                st.toast(_t("vote_cleared"))
+        else:
+            if c2.button(_t("vote_btn"), key=f"sv_{sid}", use_container_width=True):
+                if len(my_sids) >= 2 and not is_p1:      # 每人最多 2 首（p1 不限）
+                    st.error(_t("err_one_song"))
+                else:
+                    sg["votes"][my_id] = {"at": now.isoformat()}
+                    dirty = True
+                    st.toast(_t("voted_ok"))
+        if is_admin and sid != PIN_SID and c3.button("🗑", key=f"sdel_{sid}", help=str(sg["name"])):
+            del songs[sid]
+            dirty = True
+            st.toast(_t("cleared"))
+
+    with st.form("add_song", border=True):
+        nsong = st.text_input(_t("f_new_song"))
+        if st.form_submit_button(_t("add_song_btn"), type="primary", use_container_width=True):
+            my_cnt2 = sum(1 for sg in songs.values()
+                          if my_id and my_id in sg.get("votes", {}))
             if not me:
                 st.error(_t("err_login_first"))
-            elif not new_name.strip():
-                st.error(_t("err_room_name"))
-            elif len(state["rooms"]) >= MAX_ROOMS:
-                st.error(_t("err_room_cap"))
-            elif _record_anywhere(state, me["baha"], me["game"]) is not None:
-                st.error(_t("err_in_room_already"))
+            elif not nsong.strip():
+                st.error(_t("err_song_name"))
+            elif my_cnt2 >= 2 and not is_p1:
+                st.error(_t("err_one_song"))
+            elif nsong.strip().casefold() == _t("pin_song").casefold() or \
+                    any(sid2 != PIN_SID and sg2["name"].casefold() == nsong.strip().casefold()
+                        for sid2, sg2 in songs.items()):
+                st.error(_t("err_song_dup"))
             else:
-                nid = "r_" + secrets.token_hex(3)
-                ts = now.isoformat()
-                me_salt = secrets.token_hex(8)
-                me_rec = {                              # 車掌自動入座第 1 位、鎖定
-                    "baha_id": me["baha"], "game_id": me["game"],
-                    "prio": resolve_prio(me["baha"], me["game"]),
-                    "score": None, "fire": None,
-                    "pw_salt": me_salt,
-                    "pw_hash": _hash_pw(me["pw"], me_salt),
-                    "start_pref": None, "duration": 60,
-                    "reg_at": ts, "sat_at": ts, "until": None,
-                }
-                state["rooms"][nid] = {
-                    "name": new_name.strip(),
-                    "owner": me["baha"] or me["game"],
-                    "room": [me_rec], "queue": [], "messages": [],
-                    "active": ts, "created": ts,
-                }
-                if save_state(state):
-                    st.query_params["room"] = nid
-                    st.rerun()
+                sid = "s_" + secrets.token_hex(3)
+                songs[sid] = {"name": nsong.strip(),
+                             "votes": {my_id: {"at": now.isoformat()}},
+                             "zero_since": None}
+                dirty = True
+                st.toast(_t("song_added"))
 
     st.subheader(_t("join_sec"))
     if not state["rooms"]:
@@ -1320,67 +1361,41 @@ if rid is None:
                 st.query_params["room"] = rid2
                 st.rerun()
 
-    # ---------- 歌曲欄位（揪歌排隊：湊滿 5 人開房） ----------
-    st.subheader(_t("songs_h"))
-    st.caption(_t("songs_cap"))
-    songs = state.setdefault("songs", {})
-    my_id = _my_baha()
-    if not songs:
-        st.caption(_t("songs_empty"))
-    my_sids = [sid for sid, sg in songs.items()
-               if my_id and my_id in sg.get("votes", {})]
-    for sid, sg in sorted(list(songs.items()),
-                          key=lambda kv: (-len(kv[1].get("votes", {})), kv[1]["name"].casefold())):
-        mine = my_id and my_id in sg.get("votes", {})
-        n_v = len(sg.get("votes", {}))
-        rocket = "　🚀" if n_v >= 5 else ""        # 滿 5 人：可揪房
-        if is_admin:
-            c1, c2, c3 = st.columns([0.66, 0.22, 0.12])
-        else:
-            c1, c2 = st.columns([0.7, 0.3])
-            c3 = None
-        c1.markdown(f"🎵 **{sg['name']}**　{_t('song_n', n=n_v)}{'★' if mine else ''}{rocket}")
-        if not me:
-            pass
-        elif mine:
-            if c2.button(_t("cancel_vote"), key=f"sv_{sid}", use_container_width=True):
-                del sg["votes"][my_id]
-                dirty = True
-                st.toast(_t("vote_cleared"))
-        else:
-            if c2.button(_t("vote_btn"), key=f"sv_{sid}", use_container_width=True):
-                if len(my_sids) >= 2 and not is_p1:      # 每人最多 2 首（p1 不限）
-                    st.error(_t("err_one_song"))
-                else:
-                    sg["votes"][my_id] = {"at": now.isoformat()}
-                    dirty = True
-                    st.toast(_t("voted_ok"))
-        if is_admin and c3.button("🗑", key=f"sdel_{sid}", help=sg["name"]):
-            del songs[sid]
-            dirty = True
-            st.toast(_t("cleared"))
-
-    with st.form("add_song", border=True):
-        nsong = st.text_input(_t("f_new_song"))
-        if st.form_submit_button(_t("add_song_btn"), type="primary", use_container_width=True):
-            my_cnt2 = sum(1 for sg in songs.values()
-                          if my_id and my_id in sg.get("votes", {}))
+    st.subheader(_t("new_room_h"))
+    st.caption(_t("new_room_cap"))
+    with st.form("new_room", border=True):
+        new_name = st.text_input(_t("f_room_name"))
+        if st.form_submit_button(_t("open_room_btn"), type="primary", use_container_width=True):
             if not me:
                 st.error(_t("err_login_first"))
-            elif not nsong.strip():
-                st.error(_t("err_song_name"))
-            elif my_cnt2 >= 2 and not is_p1:
-                st.error(_t("err_one_song"))
-            elif any(sg["name"].casefold() == nsong.strip().casefold()
-                     for sg in songs.values()):
-                st.error(_t("err_song_dup"))
+            elif not new_name.strip():
+                st.error(_t("err_room_name"))
+            elif len(state["rooms"]) >= MAX_ROOMS:
+                st.error(_t("err_room_cap"))
+            elif _record_anywhere(state, me["baha"], me["game"]) is not None:
+                st.error(_t("err_in_room_already"))
             else:
-                sid = "s_" + secrets.token_hex(3)
-                songs[sid] = {"name": nsong.strip(),
-                             "votes": {my_id: {"at": now.isoformat()}},
-                             "zero_since": None}
-                dirty = True
-                st.toast(_t("song_added"))
+                nid = "r_" + secrets.token_hex(3)
+                ts = now.isoformat()
+                me_salt = secrets.token_hex(8)
+                me_rec = {                              # 車掌自動入座第 1 位、鎖定
+                    "baha_id": me["baha"], "game_id": me["game"],
+                    "prio": resolve_prio(me["baha"], me["game"]),
+                    "score": None, "fire": None,
+                    "pw_salt": me_salt,
+                    "pw_hash": _hash_pw(me["pw"], me_salt),
+                    "start_pref": None, "duration": 60,
+                    "reg_at": ts, "sat_at": ts, "until": None,
+                }
+                state["rooms"][nid] = {
+                    "name": new_name.strip(),
+                    "owner": me["baha"] or me["game"],
+                    "room": [me_rec], "queue": [], "messages": [],
+                    "active": ts, "created": ts,
+                }
+                if save_state(state):
+                    st.query_params["room"] = nid
+                    st.rerun()
 
 # ================================================================
 # 房間頁（所有功能都綁在這間 + 登入身分）
