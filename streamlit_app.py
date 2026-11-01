@@ -159,6 +159,12 @@ T = {
     "vote_cleared": "已取消我的票",
     "songs_empty": "還沒有人點歌，來當第一個！",
     "pin_song": "精選",
+    "f_cond_dur": "車掌多久換人（分鐘，留空＝車掌不換）",
+    "wait_mode_ck": "等待模式（乘客只能排隊，發車後依排序入座）",
+    "btn_depart": "🚀 發車（依排序入座）",
+    "wait_flag": "｜⏸ 等待模式中（發車後才入座）",
+    "wait_on_ok": "已切換成等待模式－乘客先排隊，發車後入座",
+    "departed": "已發車！",
     "mod_btn": "修改（只能縮短，冷卻 20 分）",
     "ext_btn": "延長 1 小時（剩餘 10 分內且無人排隊）",
     "err_cd": "修改冷卻中，請 {n} 分鐘後再試",
@@ -338,6 +344,12 @@ T = {
     "vote_cleared": "取消しました",
     "songs_empty": "まだ誰も曲を追加していません！",
     "pin_song": "ピックアップ",
+    "f_cond_dur": "車掌の交代間隔（分、未入力＝交代なし）",
+    "wait_mode_ck": "待機モード（乗客は待機のみ、発車後に順番に着席）",
+    "btn_depart": "🚀 出発（順番に着席）",
+    "wait_flag": "｜⏸ 待機モード（発車後に着席）",
+    "wait_on_ok": "待機モードにしました－乗客は待機し、発車後に着席します",
+    "departed": "出発しました！",
     "mod_btn": "変更（短縮のみ、CD20分）",
     "ext_btn": "1時間延長（残り10分以内＆待機なし）",
     "err_cd": "変更のクールダウン中、あと{n}分",
@@ -517,6 +529,12 @@ T = {
     "vote_cleared": "Vote cancelled",
     "songs_empty": "No songs yet — be the first!",
     "pin_song": "pickup",
+    "f_cond_dur": "Conductor rotation (minutes, blank = never)",
+    "wait_mode_ck": "Waiting mode (passengers queue only; board by order on departure)",
+    "btn_depart": "🚀 Depart (board by order)",
+    "wait_flag": " | Waiting mode (board after departure)",
+    "wait_on_ok": "Waiting mode on — passengers queue and board on departure",
+    "departed": "Departed!",
     "mod_btn": "Modify (shorten only, 20-min cooldown)",
     "ext_btn": "Extend 1 hour (≤10 min left & nobody queuing)",
     "err_cd": "Modification on cooldown, retry in {n} min",
@@ -696,6 +714,12 @@ T = {
     "vote_cleared": "Pilihan dibatalkan",
     "songs_empty": "Belum ada lagu — jadilah yang pertama!",
     "pin_song": "pickup",
+    "f_cond_dur": "Rotasi kondektur (menit, kosong = tidak berganti)",
+    "wait_mode_ck": "Mode tunggu (penumpang hanya antre; naik sesuai urutan saat keberangkatan)",
+    "btn_depart": "🚀 Berangkat (naik sesuai urutan)",
+    "wait_flag": " | Mode tunggu (naik setelah keberangkatan)",
+    "wait_on_ok": "Mode tunggu aktif — penumpang antre dan naik saat keberangkatan",
+    "departed": "Berangkat!",
     "mod_btn": "Ubah (hanya memperpendek; jeda 20 menit)",
     "ext_btn": "Perpanjang 1 jam (sisa ≤10 mnt & tanpa antrean)",
     "err_cd": "Jeda perubahan, coba lagi dalam {n} mnt",
@@ -942,6 +966,11 @@ def _qkey(p):
     return (p["prio"], batch, -(p.get("score") or 0),
             -(p.get("fire") or 0), reg)
 
+def _wait_key(p):
+    """等待模式排序：priority → 分數高 → 火高 → 先註冊（沒有半小時批次限制）"""
+    return (p["prio"], -(p.get("score") or 0),
+            -(p.get("fire") or 0), parse(p["reg_at"]))
+
 def _eligible(p, now):
     pref = p.get("start_pref")
     return pref is None or parse(pref) <= now
@@ -987,7 +1016,7 @@ def _ensure_conductor(r, now):
         return False
     changed = False
     jq = _find(r["queue"], owner)
-    if jq is not None and len(r["room"]) < ROOM_SIZE:   # 車掌還在排隊 → 直接入座
+    if jq is not None and len(r["room"]) < ROOM_SIZE and not r.get("waiting"):
         p = r["queue"].pop(jq)
         p["sat_at"] = now.isoformat()
         p["until"] = None
@@ -1005,7 +1034,9 @@ def _ensure_conductor(r, now):
     return changed
 
 def refill(r, now):
-    """空位 → 依排序遞補第一個時間到的排隊者"""
+    """空位 → 依排序遞補第一個時間到的排隊者（等待模式不遞補，等發車）"""
+    if r.get("waiting"):
+        return False
     room, queue, dirty = r["room"], r["queue"], False
     while len(room) < ROOM_SIZE and queue:
         idx = next((i for i, q in enumerate(queue) if _eligible(q, now)), None)
@@ -1329,9 +1360,10 @@ if rid is None:
     if not state["rooms"]:
         st.info(_t("no_rooms"))
     for rid2, r in state["rooms"].items():
-        card = _t("room_card", name=r["name"], owner=r.get("owner") or "—",
-                  n=len(r["room"]), cap=ROOM_SIZE, q=len(r["queue"]),
-                  m=len(r.get("messages", [])))
+        card = (_t("room_card", name=r["name"], owner=r.get("owner") or "—",
+                   n=len(r["room"]), cap=ROOM_SIZE, q=len(r["queue"]),
+                   m=len(r.get("messages", [])))
+                + (_t("wait_flag") if r.get("waiting") else ""))
         if is_admin:
             c1, c2, c3 = st.columns([0.72, 0.16, 0.12])
             c1.markdown(card)
@@ -1365,6 +1397,9 @@ if rid is None:
     st.caption(_t("new_room_cap"))
     with st.form("new_room", border=True):
         new_name = st.text_input(_t("f_room_name"))
+        wait_ck = st.checkbox(_t("wait_mode_ck"))
+        cond_dur = st.number_input(_t("f_cond_dur"), min_value=10, value=None,
+                                   step=5, key="cond_dur")
         if st.form_submit_button(_t("open_room_btn"), type="primary", use_container_width=True):
             if not me:
                 st.error(_t("err_login_first"))
@@ -1378,20 +1413,25 @@ if rid is None:
                 nid = "r_" + secrets.token_hex(3)
                 ts = now.isoformat()
                 me_salt = secrets.token_hex(8)
-                me_rec = {                              # 車掌自動入座第 1 位、鎖定
+                cond_until = None
+                if cond_dur is not None:                 # 車掌自選換人時間（留空＝鎖定）
+                    cond_until = (now + timedelta(minutes=cond_dur)).isoformat()
+                me_rec = {                              # 車掌自動入座第 1 位
                     "baha_id": me["baha"], "game_id": me["game"],
                     "prio": resolve_prio(me["baha"], me["game"]),
                     "score": None, "fire": None,
                     "pw_salt": me_salt,
                     "pw_hash": _hash_pw(me["pw"], me_salt),
-                    "start_pref": None, "duration": 60,
-                    "reg_at": ts, "sat_at": ts, "until": None,
+                    "start_pref": None, "duration": cond_dur or 60,
+                    "reg_at": ts, "sat_at": ts, "until": cond_until,
                 }
+                if cond_until:
+                    me_rec["lock_off"] = True
                 state["rooms"][nid] = {
                     "name": new_name.strip(),
                     "owner": me["baha"] or me["game"],
                     "room": [me_rec], "queue": [], "messages": [],
-                    "active": ts, "created": ts,
+                    "active": ts, "created": ts, "waiting": bool(wait_ck),
                 }
                 if save_state(state):
                     st.query_params["room"] = nid
@@ -1449,7 +1489,27 @@ else:
             st.rerun()
 
     st.caption(_t("room_cap", owner=r.get("owner") or "—", n=len(room), cap=ROOM_SIZE)
-               + _t("announce"))
+               + (_t("wait_flag") if r.get("waiting") else "") + _t("announce"))
+
+    if am_owner or is_admin:                        # 等待模式 / 發車（車掌或 admin）
+        if r.get("waiting"):
+            if st.button(_t("btn_depart"), key="dep_go", type="primary", use_container_width=True):
+                r["waiting"] = False                # 發車：乘客依排序入座
+                dirty |= refill(r, now)
+                _transfer_owner(r)
+                _ensure_conductor(r, now)
+                _touch(r, now)
+                st.toast(_t("departed"))
+                if save_state(state):
+                    st.rerun()
+        else:
+            if st.button(_t("wait_mode_ck"), key="wait_on", use_container_width=True):
+                r["waiting"] = True
+                dirty = True
+                _touch(r, now)
+                st.toast(_t("wait_on_ok"))
+                if save_state(state):
+                    st.rerun()
 
     st.subheader(_t("members_h", n=len(room), cap=ROOM_SIZE))
     rows = []
@@ -1494,10 +1554,10 @@ else:
             _t("col_fire"): p.get("fire") if p.get("fire") is not None else "—",
             _t("col_start"): fmt(p.get("start_pref")),
             _t("col_dur"): p.get("duration") if p.get("duration") is not None else "—",
-        } for i, p in enumerate(sorted(queue, key=_qkey))]
+        } for i, p in enumerate(sorted(queue, key=_wait_key if r.get("waiting") else _qkey))]
         st.dataframe(qrows, use_container_width=True, hide_index=True)
         if is_admin:                      # 管理模式：排隊者名字旁直接刪
-            for pq in sorted(queue, key=_qkey):
+            for pq in sorted(queue, key=_wait_key if r.get("waiting") else _qkey):
                 c1, c2 = st.columns([0.88, 0.12])
                 c1.markdown(_t("queued_line", x=pq["baha_id"] or "—", y=pq["game_id"] or "—"))
                 if c2.button(_t("del_btn"), key=f"admq_{pq['reg_at']}", use_container_width=True):
@@ -1654,7 +1714,7 @@ else:
                         "duration": duration,
                         "reg_at": now.isoformat(),
                     })
-                    queue.sort(key=_qkey)
+                    queue.sort(key=_wait_key if r.get("waiting") else _qkey)
                     dirty = True
                     _touch(r, now)
                     st.toast(_t("joined"))
