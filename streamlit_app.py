@@ -22,16 +22,25 @@ PRIORITY_IDS = [
 
 st.set_page_config(page_title="Hololive dreams", page_icon="🎮", layout="wide")
 
-# 背景圖（深色主題用半透明暗色遮罩，數字越小圖越清楚）
+# 背景圖：遮罩跟著 light / dark 主題切換（數字越小圖越清楚）
 BG_URL = "https://truth.bahamut.com.tw/s01/202607/forum/84454/f2c592e75c79b276e76d85beb4ea4927.JPG"
 st.markdown(f"""
 <style>
 .stApp {{
-    background: linear-gradient(rgba(18, 18, 26, 0.72), rgba(18, 18, 26, 0.72)),
+    background: linear-gradient(rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.75)),
                 url("{BG_URL}") center center / cover fixed no-repeat !important;
 }}
 [data-testid="stSidebar"] {{
-    background-color: rgba(14, 14, 20, 0.86) !important;
+    background-color: rgba(255, 255, 255, 0.88) !important;
+}}
+@media (prefers-color-scheme: dark) {{
+    .stApp {{
+        background: linear-gradient(rgba(18, 18, 26, 0.78), rgba(18, 18, 26, 0.78)),
+                    url("{BG_URL}") center center / cover fixed no-repeat !important;
+    }}
+    [data-testid="stSidebar"] {{
+        background-color: rgba(14, 14, 20, 0.88) !important;
+    }}
 }}
 </style>
 """, unsafe_allow_html=True)
