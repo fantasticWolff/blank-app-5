@@ -36,9 +36,11 @@ T = {
     "logout": "登出",
     "sb_admin_only": "管理模式（未登入玩家身分）",
     "lang_label": "🌐 語言",
-    "announce": "入房滿 1 小時換人；沒人排隊自動延長（不限次）｜最多提前 2 小時預約｜"
-                "📌 修改持續時間只能縮短、冷卻 20 分｜📌 剩餘 10 分內且無人排隊可手動延長｜"
-                "📌 一次只能排一間房｜車掌＝開房者：固定第 1 位、可改房名與移除車廂成員",
+    "announce": "📌 排隊：運行中的車全站一間、等待模式房可多排｜"
+                "📌 持續時間自己填，不可超過車掌設定的房規（沒設定＝上限 60 分）｜"
+                "📌 修改持續時間只能縮短（冷卻 20 分）｜"
+                "📌 剩餘 10 分內且無人排隊可手動延長 1 小時｜"
+                "📌 預約（指定時間）最多提前 2 小時",
     "rooms_caption": "房間 {n}/{cap} 間｜",
     "new_room_h": "🚃 車掌：開新房間（固定 5 人制）",
     "new_room_cap": "開房後你就是車掌：自動坐第 1 位、鎖定不換人",
@@ -102,6 +104,7 @@ T = {
     "err_too_far": "最多只能提前 2 小時預約！",
     "err_dur_cap": "持續時間不能超過這間房的上限 {n} 分鐘！",
     "seat_rule": "｜🔁 乘客每 {n} 分鐘換人",
+    "seat_rule_line": "🔁 這間房乘客每 {n} 分鐘換人（填的持續時間不可超過）",
     "joined": "已加入排隊！",
     "err_login_first": "請先登入",
     "err_login_queue": "請先登入再排隊",
@@ -165,7 +168,7 @@ T = {
     "f_cond_dur": "多久換一次乘客（分鐘，留空＝用乘客自填時間）",
     "wait_mode_ck": "等待模式（乘客只能排隊，發車後依排序入座）",
     "btn_depart": "🚀 發車（依排序入座）",
-    "wait_flag": "｜⏸ 等待模式中（發車後才入座）",
+    "wait_flag": "⏸ 等待模式中（發車後才入座）",
     "wait_on_ok": "已切換成等待模式－乘客先排隊，發車後入座",
     "err_car_limit": "車掌一次只能開一輛車：先把你目前在開的車解除（🏁），才能再開新房",
     "err_car_limit_depart": "你已經有一輛運行中的車：先去那間把它解除（🏁），才能把這間發車",
@@ -226,9 +229,11 @@ T = {
     "logout": "ログアウト",
     "sb_admin_only": "管理モード（未ログイン）",
     "lang_label": "🌐 言語",
-    "announce": "乗車は1時間で交代。待機者がいなければ自動延長（無制限）｜予約は2時間前まで｜"
-                "📌 持続時間の変更は短縮のみ・CD20分｜📌 残り10分以内＆待機なしで手動延長可｜"
-                "📌 同時に待機できるのは1ルームのみ｜車掌＝開設者：1番席固定、改名・乗客削除が可能",
+    "announce": "📌 待機：走行中の車は全サイト1台まで、待機モードルームは複数可｜"
+                "📌 持続時間は自記入、車掌のルーム設定を超過不可（未設定なら上限60分）｜"
+                "📌 変更は短縮のみ（CD20分）｜"
+                "📌 残り10分以内＆待機なしで手動延長1時間可｜"
+                "📌 予約（時刻指定）は2時間前まで",
     "rooms_caption": "ルーム {n}/{cap} 件｜",
     "new_room_h": "🚃 車掌：新規ルーム作成（5人固定）",
     "new_room_cap": "作成後あなたは車掌：自動的に1番席に着席、交代なし",
@@ -292,6 +297,7 @@ T = {
     "err_too_far": "予約は2時間前までです！",
     "err_dur_cap": "持続時間はこのルームの上限 {n} 分までです！",
     "seat_rule": "｜🔁 乗客は {n} 分ごとに交代",
+    "seat_rule_line": "🔁 このルームの乗客は {n} 分ごとに交代（持続時間も超過不可）",
     "joined": "待機に並びました！",
     "err_login_first": "先にログインしてください",
     "err_login_queue": "ログイン後に待機できます",
@@ -355,7 +361,7 @@ T = {
     "f_cond_dur": "乗客の交代間隔（分、未入力＝各自の設定）",
     "wait_mode_ck": "待機モード（乗客は待機のみ、発車後に順番に着席）",
     "btn_depart": "🚀 出発（順番に着席）",
-    "wait_flag": "｜⏸ 待機モード（発車後に着席）",
+    "wait_flag": "⏸ 待機モード（発車後に着席）",
     "wait_on_ok": "待機モードにしました－乗客は待機し、発車後に着席します",
     "err_car_limit": "車掌は一度に1台のみ：今の車を先に終了（🏁）してください",
     "err_car_limit_depart": "走行中の車が既にあります：先にそちらを終了（🏁）してから発車してください",
@@ -416,9 +422,11 @@ T = {
     "logout": "Log out",
     "sb_admin_only": "Admin mode (not logged in)",
     "lang_label": "🌐 Language",
-    "announce": "Seats rotate every hour; auto-extends while nobody is queuing (unlimited) | Book up to 2 hours ahead | "
-                "📌 Duration edits can only shorten (20-min cooldown) | 📌 Manual +1h extend when ≤10 min left and nobody queuing | "
-                "📌 One room at a time | Conductor = creator: fixed seat #1, can rename & remove cabin members",
+    "announce": "📌 Queue: one running car site-wide; unlimited waiting-mode rooms | "
+                "📌 Duration is self-set, can't exceed the conductor's room rule (60-min cap if unset) | "
+                "📌 Edits shorten only (20-min cooldown) | "
+                "📌 Manual +1h extend when ≤10 min left and nobody queuing | "
+                "📌 Book (pick a time) up to 2 hours ahead",
     "rooms_caption": "Rooms {n}/{cap} | ",
     "new_room_h": "🚃 Conductor: open a new room (5 seats fixed)",
     "new_room_cap": "After creating, you're the conductor: auto seat #1, no rotation",
@@ -482,6 +490,7 @@ T = {
     "err_too_far": "You can book at most 2 hours ahead!",
     "err_dur_cap": "Duration can't exceed this room's limit of {n} minutes!",
     "seat_rule": " | 🔁 Passengers rotate every {n} min",
+    "seat_rule_line": "🔁 Passengers rotate every {n} min (your duration can't exceed it)",
     "joined": "Queued!",
     "err_login_first": "Please log in first",
     "err_login_queue": "Log in to queue",
@@ -545,7 +554,7 @@ T = {
     "f_cond_dur": "Passenger rotation (minutes, blank = each player's own setting)",
     "wait_mode_ck": "Waiting mode (passengers queue only; board by order on departure)",
     "btn_depart": "🚀 Depart (board by order)",
-    "wait_flag": " | Waiting mode (board after departure)",
+    "wait_flag": " Waiting mode (board after departure)",
     "wait_on_ok": "Waiting mode on — passengers queue and board on departure",
     "err_car_limit": "One car per conductor: close your current car (🏁) before opening a new room",
     "err_car_limit_depart": "You already have a running car: close it (🏁) on that room first, then depart here",
@@ -606,9 +615,11 @@ T = {
     "logout": "Keluar",
     "sb_admin_only": "Mode admin (belum login)",
     "lang_label": "🌐 Bahasa",
-    "announce": "Kursi berganti tiap 1 jam; otomatis diperpanjang saat tidak ada antrean (tanpa batas) | Pesan maks 2 jam ke depan | "
-                "📌 Perubahan durasi hanya boleh memperpendek (jeda 20 menit) | 📌 Perpanjang manual +1 jam saat sisa ≤10 menit & tidak ada antrean | "
-                "📌 Satu ruangan saja dalam satu waktu | Kondektur = pembuat: kursi #1 tetap, bisa ganti nama & hapus penumpang",
+    "announce": "📌 Antre: satu mobil aktif di seluruh situs; ruang mode tunggu bebas | "
+                "📌 Durasi isi sendiri, tidak boleh melebihi aturan ruangan kondektur (batas 60 menit jika tak diatur) | "
+                "📌 Perubahan hanya memperpendek (jeda 20 menit) | "
+                "📌 Perpanjang manual +1 jam saat sisa ≤10 mnt & tak ada antrean | "
+                "📌 Pesan (pilih waktu) maksimal 2 jam ke depan",
     "rooms_caption": "Ruang {n}/{cap} | ",
     "new_room_h": "🚃 Kondektur: buka ruang baru (tetap 5 orang)",
     "new_room_cap": "Setelah membuat, kamu jadi kondektur: otomatis kursi #1, tanpa rotasi",
@@ -672,6 +683,7 @@ T = {
     "err_too_far": "Pemesanan maksimal 2 jam ke depan!",
     "err_dur_cap": "Durasi tidak boleh melebihi batas {n} menit di ruangan ini!",
     "seat_rule": " | 🔁 Penumpang berganti tiap {n} menit",
+    "seat_rule_line": "🔁 Penumpang berganti tiap {n} menit (durasi tidak boleh melebihi)",
     "joined": "Masuk antrean!",
     "err_login_first": "Silakan login dulu",
     "err_login_queue": "Login dulu untuk antre",
@@ -735,7 +747,7 @@ T = {
     "f_cond_dur": "Rotasi penumpang (menit, kosong = pengaturan masing-masing)",
     "wait_mode_ck": "Mode tunggu (penumpang hanya antre; naik sesuai urutan saat keberangkatan)",
     "btn_depart": "🚀 Berangkat (naik sesuai urutan)",
-    "wait_flag": " | Mode tunggu (naik setelah keberangkatan)",
+    "wait_flag": " Mode tunggu (naik setelah keberangkatan)",
     "wait_on_ok": "Mode tunggu aktif — penumpang antre dan naik saat keberangkatan",
     "err_car_limit": "Satu mobil per kondektur: akhiri mobil yang sedang kamu jalankan (🏁) dulu",
     "err_car_limit_depart": "Kamu sudah punya mobil aktif: akhiri dulu (🏁) di ruangan itu, baru berangkat di sini",
@@ -1413,7 +1425,7 @@ if rid is None:
         card = (_t("room_card", name=r["name"], owner=r.get("owner") or "—",
                    n=len(r["room"]), cap=ROOM_SIZE, q=len(r["queue"]),
                    m=len(r.get("messages", [])))
-                + (_t("wait_flag") if r.get("waiting") else "")
+                + (("｜" + _t("wait_flag")) if r.get("waiting") else "")
                 + (_t("seat_rule", n=r["seat_minutes"]) if r.get("seat_minutes") else "")
                 + (_t("iam_here") if my_here else ""))
         if is_admin:
@@ -1540,8 +1552,7 @@ else:
 
     st.caption(_t("room_cap", owner=r.get("owner") or "—", n=len(room), cap=ROOM_SIZE)
                + (_t("wait_flag") if r.get("waiting") else "")
-               + (_t("seat_rule", n=r["seat_minutes"]) if r.get("seat_minutes") else "")
-               + _t("announce"))
+                              + _t("announce"))
 
     if am_owner or is_admin:                        # 等待模式 / 發車（車掌或 admin）
         if r.get("waiting"):
@@ -1585,6 +1596,8 @@ else:
                 st.rerun()
 
     st.subheader(_t("members_h", n=len(room), cap=ROOM_SIZE))
+    if r.get("seat_minutes"):                     # 房規換人時間：獨立高亮顯示
+        st.success(_t("seat_rule_line", n=r["seat_minutes"]))
     rows = []
     for i in range(ROOM_SIZE):
         if i < len(room):
