@@ -20,7 +20,21 @@ PRIORITY_IDS = [
     ("夜久", "Ten Tender", 2),
 ]
 
-st.set_page_config(page_title="組隊房間", page_icon="🎮", layout="wide")
+st.set_page_config(page_title="Hololive dreams", page_icon="🎮", layout="wide")
+
+# 背景圖（半透明白色遮罩，數字越小圖越清楚）
+BG_URL = "https://truth.bahamut.com.tw/s01/202607/forum/84454/f2c592e75c79b276e76d85beb4ea4927.JPG"
+st.markdown(f"""
+<style>
+.stApp {{
+    background: linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)),
+                url("{BG_URL}") center center / cover fixed no-repeat !important;
+}}
+[data-testid="stSidebar"] {{
+    background-color: rgba(255, 255, 255, 0.85) !important;
+}}
+</style>
+""", unsafe_allow_html=True)
 
 
 # ---------- 時間 ----------
@@ -245,15 +259,12 @@ with st.sidebar:
             else:
                 prio = resolve_prio(baha, game)
                 start_pref = None
-                if when != "現在馬上排":
-                    if pref_t is None:
-                        st.error("請選擇指定時間")
-                        st.stop()
+                if when != "現在馬上排" and pref_t is not None:
                     cand = now.replace(hour=pref_t.hour, minute=pref_t.minute,
                                        second=0, microsecond=0)
                     if cand < now:
                         cand += timedelta(days=1)
-                    if cand > now + MAX_AHEAD:
+                    if prio >= 3 and cand > now + MAX_AHEAD:   # 提前2小時只限一般玩家
                         st.error("最多只能提前 2 小時預約！")
                         st.stop()
                     start_pref = cand.isoformat()
