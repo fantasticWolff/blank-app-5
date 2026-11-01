@@ -166,10 +166,13 @@ def refill(state, now):
             break
         p = queue.pop(idx)
         p["sat_at"] = now.isoformat()
-        d = p.get("duration") or 60               # 沒填 = 60
-        if p.get("prio", 3) >= 3 and d > 60:       # 一般玩家上限 60；p1/p2 不限
-            d = 60
-        p["until"] = (now + timedelta(minutes=max(10, d))).isoformat()
+        if p.get("prio", 3) <= 2:                 # p1/p2 入房即鎖定，不換人
+            p["until"] = None
+        else:
+            d = p.get("duration") or 60          # 沒填 = 60
+            if d > 60:
+                d = 60
+            p["until"] = (now + timedelta(minutes=max(10, d))).isoformat()
         room.append(p)
         dirty = True
     return dirty
@@ -177,10 +180,17 @@ def refill(state, now):
 def reconcile(state, now):
     dirty = False
     room, queue = state["room"], state["queue"]
-    for p in list(room):                      # 時間到：換人或延長
-        if parse(p["until"]) <= now:
+    for p in room:                                  # 舊資料：p1/p2 補轉鎖定
+        if p.get("prio", 3) <= 2 and p.get("until") is not None:
+            p["until"] = None
+            dirty = True
+    for p in list(room):                            # 時間到：換人或延長
+        until = p.get("until")
+        if until is None:                           # 鎖定成員不換人
+            continue
+        if parse(until) <= now:
             if any(_eligible(q, now) for q in queue):
-                room.remove(p)                # 滿時間必須換人
+                room.remove(p)                      # 滿時間必須換人
             else:
                 p["until"] = (now + timedelta(hours=1)).isoformat()  # 沒人排 → 延長1hr
                 p["ext"] = p.get("ext", 0) + 1
@@ -204,12 +214,13 @@ rows = []
 for i in range(ROOM_SIZE):
     if i < len(room):
         p = room[i]
-        remain = int((parse(p["until"]) - now).total_seconds() // 60)
+        locked = p.get("until") is None
         rows.append({
             "座位": i + 1, "巴哈ID": p["baha_id"] or "—", "遊戲ID": p["game_id"] or "—",
             "入座": fmt(p["sat_at"]),
-            "換人時間": fmt(p["until"]), "剩餘(分)": remain,
-            "延長次數": p.get("ext", 0),
+            "換人時間": "🔒 鎖定" if locked else fmt(p["until"]),
+            "剩餘(分)": "—" if locked else int((parse(p["until"]) - now).total_seconds() // 60),
+            "延長次數": "—" if locked else p.get("ext", 0),
         })
     else:
         rows.append({"座位": i + 1, "巴哈ID": "（空位）", "遊戲ID": "—",
