@@ -1742,11 +1742,9 @@ else:
             else:
                 prio = resolve_prio(me["baha"], me["game"])
                 missing = []
-                if prio >= 3:                        # 一般玩家：所有欄位必填
+                if prio >= 3:                        # 一般玩家：欄位必填（火可為 0）
                     if not score:
                         missing.append(_t("f_score"))
-                    if not fire:
-                        missing.append(_t("f_fire"))
                     if when != _t("now") and pref_t is None:
                         missing.append(_t("f_time"))
                     if dur is None:
