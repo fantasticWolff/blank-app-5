@@ -249,6 +249,37 @@ if queue:
 else:
     st.info("目前沒有人排隊")
 
+# ---------- 留言板 ----------
+msgs = state.setdefault("messages", [])
+st.subheader(f"💬 留言板（{len(msgs)} 則）")
+if msgs:
+    for m in reversed(msgs):
+        tag = f"　↩ 回覆 #{m['reply_to']}" if m.get("reply_to") else ""
+        st.markdown(f"**#{m['no']}　{m['name']}**{tag}　—　{fmt(m['ts'])}  \n{m['text']}")
+else:
+    st.caption("還沒有留言")
+
+with st.form("msg_form", border=True):
+    m_name = st.text_input("你的ID（巴哈或遊戲ID）")
+    m_reply = st.number_input("回覆哪一則（填留言編號，0 = 不回覆）", min_value=0, value=0, step=1)
+    m_text = st.text_area("留言內容（上限 500 字）", max_chars=500)
+    if st.form_submit_button("留言 💬", type="primary", use_container_width=True):
+        if not m_name.strip() or not m_text.strip():
+            st.error("ID 和內容都要填")
+        elif m_reply and not any(x["no"] == m_reply for x in msgs):
+            st.error(f"找不到 #{m_reply} 這則留言")
+        else:
+            msgs.append({
+                "no": msgs[-1]["no"] + 1 if msgs else 1,
+                "name": m_name.strip(),
+                "reply_to": m_reply or None,
+                "text": m_text.strip(),
+                "ts": now.isoformat(),
+            })
+            del msgs[:len(msgs) - 100]          # 最多保留 100 則
+            dirty = True
+            st.toast("已留言！")
+
 # ---------- 側邊欄：排隊表單 / 退出 / 管理 ----------
 with st.sidebar:
     st.header("✍️ 加入排隊")
@@ -486,7 +517,8 @@ with st.sidebar:
                 del st.session_state["adm_conf"]
                 st.rerun()
 
-        for label, part in (("🧹 清空房間", "room"), ("🧹 清空排隊", "queue")):
+        for label, part in (("🧹 清空房間", "room"), ("🧹 清空排隊", "queue"),
+                            ("🧹 清空留言板", "messages")):
             if st.button(label, key=f"clr_{part}"):
                 st.session_state[f"clr_pending_{part}"] = True
                 st.rerun()
