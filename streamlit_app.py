@@ -9,6 +9,7 @@ from zoneinfo import ZoneInfo
 
 import requests
 import streamlit as st
+from streamlit_autorefresh import st_autorefresh
 
 TZ = ZoneInfo("Asia/Taipei")
 ROOM_SIZE = 5                # 每間房固定 5 人
@@ -36,6 +37,7 @@ except Exception:
     PRIORITY_IDS = []        # 沒設定或格式錯 → 沒有特別名單，大家一律一般玩家
 
 st.set_page_config(page_title="Hololive dreams", page_icon="🎮", layout="wide")
+st_autorefresh(interval=30_000, key="autorefresh")   # 每 30 秒自動重整，idle 頁面也會同步
 
 # 背景圖：遮罩跟著 light / dark 主題切換（數字越小圖越清楚）
 BG_URL = "https://truth.bahamut.com.tw/s01/202607/forum/84454/f2c592e75c79b276e76d85beb4ea4927.JPG"
