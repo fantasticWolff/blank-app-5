@@ -16,6 +16,7 @@ MAX_ROOMS = 20               # 最多 20 間
 MAX_AHEAD = timedelta(hours=2)          # 最多提前 2 小時預約
 ROOM_TTL = timedelta(hours=8)           # 8 小時無排隊且無任何變化 → 自動刪
 PIN_SID = "s_pickup"                    # 固定歌曲（精選／ピックアップ／pickup），永遠第一位
+SONG_VOTE_TTL = timedelta(minutes=10)     # 想玩的票 10 分鐘自動取消
 
 # ---------------- 多語系 ----------------
 LANG_NAMES = {"zh": "中文", "ja": "日本語", "en": "English", "id": "Bahasa Indonesia"}
@@ -145,7 +146,7 @@ T = {
     "depart_done": "發車時間已設定",
     "depart_cleared": "已取消排定，立即發車",
     "songs_h": "🎵 想玩的歌（湊滿 5 人揪房）",
-    "songs_cap": "這裡也是排隊區：點你想玩的歌，某首歌滿 5 人就可以直接開房、不用等人。加入車廂或排隊後，你的選擇會自動取消；每人最多選 2 首。",
+    "songs_cap": "這裡也是排隊區：點你想玩的歌（10 分鐘後會自動取消，代表你現在想玩）。滿 5 人代表很多人在等待，建議可以開新車。加入車廂或排隊後選擇也會自動取消；每人最多選 2 首。",
     "f_new_song": "歌名",
     "add_song_btn": "＋ 新增並投它一票",
     "vote_btn": "我想玩",
@@ -158,6 +159,7 @@ T = {
     "voted_ok": "已投給這首",
     "vote_cleared": "已取消我的票",
     "songs_empty": "還沒有人點歌，來當第一個！",
+    "iam_here": "　🔵 我在這",
     "pin_song": "精選",
     "f_cond_dur": "多久換一次乘客（分鐘，留空＝用乘客自填時間）",
     "wait_mode_ck": "等待模式（乘客只能排隊，發車後依排序入座）",
@@ -333,7 +335,7 @@ T = {
     "depart_done": "発車時刻を設定しました",
     "depart_cleared": "取消しました（すぐ発車）",
     "songs_h": "🎵 やりたい曲（5人揃えば即開房）",
-    "songs_cap": "ここも待機所です：やりたい曲を選ぶと、1曲5人揃ったら待たずにルームを作れます。乗車・待機に入ると選択は自動解除。1人2曲まで。",
+    "songs_cap": "ここも待機所です：やりたい曲を選択（10分後に自動取消＝今やりたい）。1曲5人なら待機人が多いので新規ルーム開設がおすすめ。乗車・待機後は自動解除、1人2曲まで。",
     "f_new_song": "曲名",
     "add_song_btn": "＋ 新規追加して投票",
     "vote_btn": "プレイしたい",
@@ -346,6 +348,7 @@ T = {
     "voted_ok": "投票しました",
     "vote_cleared": "取消しました",
     "songs_empty": "まだ誰も曲を追加していません！",
+    "iam_here": "　🔵 参加中",
     "pin_song": "ピックアップ",
     "f_cond_dur": "乗客の交代間隔（分、未入力＝各自の設定）",
     "wait_mode_ck": "待機モード（乗客は待機のみ、発車後に順番に着席）",
@@ -521,7 +524,7 @@ T = {
     "depart_done": "Departure time set",
     "depart_cleared": "Schedule cleared — departs now",
     "songs_h": "🎵 Songs to team up （5 players → open a room）",
-    "songs_cap": "This is also a match queue: pick songs you want to play. When a song reaches 5 players, you can open its room right away with no waiting. Joining a cabin or a room's queue removes your picks automatically. Max 2 songs per player.",
+    "songs_cap": "This is also a match queue: pick songs you want to play (auto-cancels after 10 minutes — it means you want it now). 5 players on a song means many are waiting — opening a new room is recommended. Joining a cabin/queue also cancels picks; max 2 songs.",
     "f_new_song": "Song title",
     "add_song_btn": "＋ Add & vote",
     "vote_btn": "I want to play",
@@ -534,6 +537,7 @@ T = {
     "voted_ok": "Voted",
     "vote_cleared": "Vote cancelled",
     "songs_empty": "No songs yet — be the first!",
+    "iam_here": " 🔵 I'm here",
     "pin_song": "pickup",
     "f_cond_dur": "Passenger rotation (minutes, blank = each player's own setting)",
     "wait_mode_ck": "Waiting mode (passengers queue only; board by order on departure)",
@@ -709,7 +713,7 @@ T = {
     "depart_done": "Waktu keberangkatan diatur",
     "depart_cleared": "Jadwal dibatalkan — langsung berangkat",
     "songs_h": "🎵 Lagu untuk tim（5 orang → buka ruang）",
-    "songs_cap": "Ini juga daftar tunggu: pilih lagu yang ingin kamu mainkan. Saat satu lagu mencapai 5 orang, kamu bisa langsung membuka ruangnya tanpa menunggu. Masuk kursi/antrean otomatis membatalkan pilihanmu. Maks 2 lagu per orang.",
+    "songs_cap": "Ini juga daftar tunggu: pilih lagu yang ingin dimainkan (otomatis batal setelah 10 menit = kamu ingin sekarang). 5 orang artinya banyak menunggu — disarankan buka ruang baru. Masuk kursi/antrean juga membatalkan pilihan; maks 2 lagu.",
     "f_new_song": "Judul lagu",
     "add_song_btn": "＋ Tambah & pilih",
     "vote_btn": "Aku mau main",
@@ -722,6 +726,7 @@ T = {
     "voted_ok": "Dipilih",
     "vote_cleared": "Pilihan dibatalkan",
     "songs_empty": "Belum ada lagu — jadilah yang pertama!",
+    "iam_here": " 🔵 Aku di sini",
     "pin_song": "pickup",
     "f_cond_dur": "Rotasi penumpang (menit, kosong = pengaturan masing-masing)",
     "wait_mode_ck": "Mode tunggu (penumpang hanya antre; naik sesuai urutan saat keberangkatan)",
@@ -1139,6 +1144,11 @@ def _reconcile_songs(state, now):
     for sid in list(state.get("songs", {})):
         sg = state["songs"][sid]
         sg.setdefault("votes", {})
+        for vkey in list(sg["votes"]):              # 票滿 10 分鐘 → 自動取消
+            at = sg["votes"][vkey].get("at")
+            if at and now - parse(at) > SONG_VOTE_TTL:
+                del sg["votes"][vkey]
+                changed = True
         for vkey in list(sg["votes"]):              # 已上車 → 移除計數
             ingame = any(_find(r2["room"], vkey) is not None or
                          _find(r2["queue"], vkey) is not None
@@ -1394,10 +1404,14 @@ if rid is None:
     if not state["rooms"]:
         st.info(_t("no_rooms"))
     for rid2, r in state["rooms"].items():
+        my_here = me and any(_find(lst, x) is not None
+                             for lst in (r["room"], r["queue"])
+                             for x in (me["baha"], me["game"]))
         card = (_t("room_card", name=r["name"], owner=r.get("owner") or "—",
                    n=len(r["room"]), cap=ROOM_SIZE, q=len(r["queue"]),
                    m=len(r.get("messages", [])))
-                + (_t("wait_flag") if r.get("waiting") else ""))
+                + (_t("wait_flag") if r.get("waiting") else "")
+                + (_t("iam_here") if my_here else ""))
         if is_admin:
             c1, c2, c3 = st.columns([0.72, 0.16, 0.12])
             c1.markdown(card)
