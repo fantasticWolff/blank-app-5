@@ -164,6 +164,9 @@ T = {
     "btn_depart": "🚀 發車（依排序入座）",
     "wait_flag": "｜⏸ 等待模式中（發車後才入座）",
     "wait_on_ok": "已切換成等待模式－乘客先排隊，發車後入座",
+    "err_car_limit": "車掌一次只能開一輛車：先把你目前在開的車解除（🏁），才能再開新房",
+    "err_car_limit_depart": "你已經有一輛運行中的車：先去那間把它解除（🏁），才能把這間發車",
+    "btn_close_car": "🏁 解除這輛車（關房）",
     "departed": "已發車！",
     "mod_btn": "修改（只能縮短，冷卻 20 分）",
     "ext_btn": "延長 1 小時（剩餘 10 分內且無人排隊）",
@@ -349,6 +352,9 @@ T = {
     "btn_depart": "🚀 出発（順番に着席）",
     "wait_flag": "｜⏸ 待機モード（発車後に着席）",
     "wait_on_ok": "待機モードにしました－乗客は待機し、発車後に着席します",
+    "err_car_limit": "車掌は一度に1台のみ：今の車を先に終了（🏁）してください",
+    "err_car_limit_depart": "走行中の車が既にあります：先にそちらを終了（🏁）してから発車してください",
+    "btn_close_car": "🏁 この車を終了（閉鎖）",
     "departed": "出発しました！",
     "mod_btn": "変更（短縮のみ、CD20分）",
     "ext_btn": "1時間延長（残り10分以内＆待機なし）",
@@ -534,6 +540,9 @@ T = {
     "btn_depart": "🚀 Depart (board by order)",
     "wait_flag": " | Waiting mode (board after departure)",
     "wait_on_ok": "Waiting mode on — passengers queue and board on departure",
+    "err_car_limit": "One car per conductor: close your current car (🏁) before opening a new room",
+    "err_car_limit_depart": "You already have a running car: close it (🏁) on that room first, then depart here",
+    "btn_close_car": "🏁 Close this car (delete room)",
     "departed": "Departed!",
     "mod_btn": "Modify (shorten only, 20-min cooldown)",
     "ext_btn": "Extend 1 hour (≤10 min left & nobody queuing)",
@@ -719,6 +728,9 @@ T = {
     "btn_depart": "🚀 Berangkat (naik sesuai urutan)",
     "wait_flag": " | Mode tunggu (naik setelah keberangkatan)",
     "wait_on_ok": "Mode tunggu aktif — penumpang antre dan naik saat keberangkatan",
+    "err_car_limit": "Satu mobil per kondektur: akhiri mobil yang sedang kamu jalankan (🏁) dulu",
+    "err_car_limit_depart": "Kamu sudah punya mobil aktif: akhiri dulu (🏁) di ruangan itu, baru berangkat di sini",
+    "btn_close_car": "🏁 Akhiri mobil ini (hapus ruangan)",
     "departed": "Berangkat!",
     "mod_btn": "Ubah (hanya memperpendek; jeda 20 menit)",
     "ext_btn": "Perpanjang 1 jam (sisa ≤10 mnt & tanpa antrean)",
@@ -994,6 +1006,15 @@ def _in_category_rooms(state, baha, game, waiting):
             for x in (baha, game):
                 if x and _find(lst, x) is not None:
                     return r2
+    return None
+
+def _owned_room(state, me):
+    """找出 me 當車掌的房間（全站，等待或運行都算）"""
+    myself = {(me["baha"] or "").strip().casefold(), (me["game"] or "").strip().casefold()}
+    myself.discard("")
+    for r2 in state["rooms"].values():
+        if (r2.get("owner") or "").strip().casefold() in myself:
+            return r2
     return None
 
 def _record_anywhere(state, baha, game):
@@ -1420,8 +1441,9 @@ if rid is None:
                 st.error(_t("err_room_name"))
             elif len(state["rooms"]) >= MAX_ROOMS:
                 st.error(_t("err_room_cap"))
-            elif not is_p1 and _in_category_rooms(state, me["baha"], me["game"],
-                                                  wait_ck) is not None:
+            elif not is_p1 and _owned_room(state, me) is not None:      # 車掌一次一台車
+                st.error(_t("err_car_limit"))
+            elif not wait_ck and not is_p1 and                     _in_category_rooms(state, me["baha"], me["game"], False) is not None:
                 st.error(_t("err_in_room_already"))
             else:
                 nid = "r_" + secrets.token_hex(3)
@@ -1504,14 +1526,18 @@ else:
     if am_owner or is_admin:                        # 等待模式 / 發車（車掌或 admin）
         if r.get("waiting"):
             if st.button(_t("btn_depart"), key="dep_go", type="primary", use_container_width=True):
-                r["waiting"] = False                # 發車：乘客依排序入座
-                dirty |= refill(r, now)
-                _transfer_owner(r)
-                _ensure_conductor(r, now)
-                _touch(r, now)
-                st.toast(_t("departed"))
-                if save_state(state):
-                    st.rerun()
+                _own = None if is_p1 else _owned_room(state, me)
+                if _own is not None and _own is not r and not _own.get("waiting"):
+                    st.error(_t("err_car_limit_depart"))   # 先解除運行中的那輛
+                else:
+                    r["waiting"] = False            # 發車：乘客依排序入座
+                    dirty |= refill(r, now)
+                    _transfer_owner(r)
+                    _ensure_conductor(r, now)
+                    _touch(r, now)
+                    st.toast(_t("departed"))
+                    if save_state(state):
+                        st.rerun()
         else:
             if st.button(_t("wait_mode_ck"), key="wait_on", use_container_width=True):
                 r["waiting"] = True
@@ -1520,6 +1546,23 @@ else:
                 st.toast(_t("wait_on_ok"))
                 if save_state(state):
                     st.rerun()
+
+    if am_owner:                                    # 車掌解除自己的車（關房）
+        if st.button(_t("btn_close_car"), key="own_close_car", use_container_width=True):
+            st.session_state["own_del_pending"] = True
+            st.rerun()
+        if st.session_state.get("own_del_pending"):
+            st.warning(_t("confirm_del_room2"))
+            zc1, zc2 = st.columns(2)
+            if zc1.button(_t("sure_del"), key="own_del_yes", type="primary"):
+                del state["rooms"][rid]
+                st.session_state.pop("own_del_pending", None)
+                if save_state(state):
+                    st.query_params.clear()
+                    st.rerun()
+            if zc2.button(_t("cancel"), key="own_del_no"):
+                st.session_state.pop("own_del_pending", None)
+                st.rerun()
 
     st.subheader(_t("members_h", n=len(room), cap=ROOM_SIZE))
     rows = []
@@ -1676,8 +1719,8 @@ else:
         if ok and me:
             in_this = any(_find(lst, x) is not None
                           for lst in (room, queue) for x in (me["baha"], me["game"]))
-            other = (None if is_p1 else
-                     _in_category_rooms(state, me["baha"], me["game"], r.get("waiting")))
+            other = (None if (is_p1 or r.get("waiting")) else      # 等待房可多排；運行限一間
+                     _in_category_rooms(state, me["baha"], me["game"], False))
             if in_this:
                 st.error(_t("err_dup_this"))
             elif other is not None and other is not r:
