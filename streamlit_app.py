@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """組隊房間：5人房 + 排隊，狀態存 GitHub repo JSON"""
 import base64
+import hashlib
 import json
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -61,18 +62,24 @@ def load_state():
     c = _gh()
     _sha, raw = _gh_get(c["token"], c["url"], c["branch"])
     if raw is None:
-        return {"room": [], "queue": []}
-    try:
-        state = json.loads(raw)
-    except Exception:
-        st.error("room_state.json 內容損毀，請到 GitHub 手動檢查")
-        st.stop()
-    state.setdefault("room", [])
-    state.setdefault("queue", [])
-    return state
+        fetched = {"room": [], "queue": [], "rev": 0}
+    else:
+        try:
+            fetched = json.loads(raw)
+        except Exception:
+            st.error("room_state.json 內容損毀，請到 GitHub 手動檢查")
+            st.stop()
+        fetched.setdefault("room", [])
+        fetched.setdefault("queue", [])
+    # GitHub GET 有約 60 秒快取，剛存完會讀回舊檔 → 版號較新就用自己剛存的
+    saved = st.session_state.get("saved_state")
+    if saved and saved.get("rev", 0) > fetched.get("rev", 0):
+        return saved
+    return fetched
 
 def save_state(state):
     c = _gh()
+    state["rev"] = state.get("rev", 0) + 1
     payload = base64.b64encode(json.dumps(state, ensure_ascii=False).encode()).decode()
     for _ in range(3):                       # 同時有人改 → 409 重試
         sha, _raw = _gh_get(c["token"], c["url"], c["branch"])
@@ -85,6 +92,7 @@ def save_state(state):
                          json=body, timeout=15)
         if r.status_code < 300:
             _gh_get.clear()
+            st.session_state["saved_state"] = state   # 寫穿快取：自己馬上看到
             return True
         _gh_get.clear()
     st.error("GitHub 儲存失敗（可能同時有人操作），請再試一次")
@@ -98,6 +106,14 @@ def resolve_prio(baha, game):
         if b == pb.casefold() or g == pg.casefold():
             return p
     return 3
+
+def _sha(pw):
+    return hashlib.sha256((pw or "").encode()).hexdigest()
+
+def _pw_ok(p, pw, is_admin):
+    if is_admin or p.get("pw_hash") is None:   # 舊資料沒密碼 → 放行
+        return True
+    return _sha(pw) == p["pw_hash"]
 
 def _qkey(p):
     """priority 絕對 → 較早半小時批 → 分數高 → 火消耗高 → 先註冊"""
@@ -162,7 +178,7 @@ dirty = reconcile(state, now)
 
 st.title("🎮 組隊房間")
 st.caption("房間 5 人制｜入房滿 1 小時換人；沒人排隊自動延長（不限次）｜"
-           "最多提前 2 小時預約｜priority：小狼/こはね > 夜久/Ten Tender > 其他人")
+           "最多提前 2 小時預約")
 
 room, queue = state["room"], state["queue"]
 
@@ -174,12 +190,12 @@ for i in range(ROOM_SIZE):
         remain = int((parse(p["until"]) - now).total_seconds() // 60)
         rows.append({
             "座位": i + 1, "巴哈ID": p["baha_id"] or "—", "遊戲ID": p["game_id"] or "—",
-            "P": f"p{p['prio']}", "入座": fmt(p["sat_at"]),
+            "入座": fmt(p["sat_at"]),
             "換人時間": fmt(p["until"]), "剩餘(分)": remain,
             "延長次數": p.get("ext", 0),
         })
     else:
-        rows.append({"座位": i + 1, "巴哈ID": "（空位）", "遊戲ID": "—", "P": "—",
+        rows.append({"座位": i + 1, "巴哈ID": "（空位）", "遊戲ID": "—",
                      "入座": "—", "換人時間": "—", "剩餘(分)": "—", "延長次數": "—"})
 st.dataframe(rows, use_container_width=True, hide_index=True)
 
@@ -187,7 +203,7 @@ st.subheader(f"⏳ 排隊（{len(queue)} 人）")
 if queue:
     qrows = [{
         "順位": i + 1, "巴哈ID": p["baha_id"] or "—", "遊戲ID": p["game_id"] or "—",
-        "P": f"p{p['prio']}", "隊伍分數": p.get("score") if p.get("score") is not None else "—",
+        "隊伍分數": p.get("score") if p.get("score") is not None else "—",
         "火消耗": p.get("fire") if p.get("fire") is not None else "—",
         "希望開始": fmt(p.get("start_pref")),
         "持續(分)": p.get("duration", "—"), "註冊時間": fmt(p["reg_at"]),
@@ -199,13 +215,14 @@ else:
 # ---------- 側邊欄：排隊表單 / 退出 / 管理 ----------
 with st.sidebar:
     st.header("✍️ 加入排隊")
+    when = st.selectbox("希望開始時間", ["現在馬上排", "指定時間（最多提前 2 小時）"])
     with st.form("join_form", border=True):
         baha = st.text_input("巴哈ID（必填其一）")
         game = st.text_input("遊戲ID（必填其一）")
-        st.caption("p1/p2（小狼、夜久）後面幾項可任意填，填 0 / 不選 = 不顯示")
+        pw = st.text_input("4位密碼（退出時必須相同）", max_chars=4, type="password")
+        st.caption("ID 以外的欄位皆可任意填，填 0 / 不選 = 不顯示")
         score = st.number_input("隊伍分數", min_value=0, value=0)
         fire = st.number_input("火消耗", min_value=0, value=0)
-        when = st.selectbox("希望開始時間", ["現在馬上排", "指定時間（最多提前 2 小時）"])
         pref_t = st.time_input("指定時間", value=None, disabled=(when == "現在馬上排"))
         dur = st.number_input("持續時間（分鐘，上限 60）",
                               min_value=10, max_value=60, value=30, step=5)
@@ -219,6 +236,8 @@ with st.sidebar:
             st.session_state["admin"] = True
             st.toast("管理模式已開啟")
             st.rerun()
+        elif len(pw) != 4:
+            st.error("密碼請設剛好 4 位")
         else:
             dup = _id_exists(state, baha, game)
             if dup:
@@ -242,6 +261,7 @@ with st.sidebar:
                     "baha_id": baha, "game_id": game, "prio": prio,
                     "score": score or None,       # 0 = 沒填 → 不顯示
                     "fire": fire or None,
+                    "pw_hash": _sha(pw),
                     "start_pref": start_pref,
                     "duration": dur,
                     "reg_at": now.isoformat(),
@@ -253,15 +273,22 @@ with st.sidebar:
     st.markdown("---")
     st.header("🚪 退出")
     xid = st.text_input("輸入你的巴哈ID或遊戲ID", key="exit_id")
+    xpw = st.text_input("你的4位密碼", max_chars=4, type="password", key="exit_pw")
     if st.button("退出房間 / 排隊", use_container_width=True):
+        is_admin = st.session_state.get("admin", False)
         if xid.strip().casefold() == ADMIN_ID:
             st.session_state["admin"] = True
             st.rerun()
         elif _find(room, xid) is None and _find(queue, xid) is None:
             st.error("找不到這個 ID")
         else:
-            st.session_state["exit_pending"] = xid.strip()
-            st.rerun()
+            i = _find(room, xid)
+            target = room[i] if i is not None else queue[_find(queue, xid)]
+            if _pw_ok(target, xpw, is_admin):
+                st.session_state["exit_pending"] = xid.strip()
+                st.rerun()
+            else:
+                st.error("密碼不符合，無法退出")
 
     if "exit_pending" in st.session_state:
         t = st.session_state["exit_pending"]
