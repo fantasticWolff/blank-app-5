@@ -213,8 +213,8 @@ state = load_state()
 dirty = reconcile(state, now)
 
 st.title("🎮 組隊房間")
-st.caption("房間 5 人制｜入房滿 1 小時換人；沒人排隊自動延長（不限次）｜"
-           "最多提前 2 小時預約")
+st.caption("房間 5 人制｜入房滿 1 小時換人；沒人排隊自動延長（不限次）｜最多提前 2 小時預約｜"
+           "📌 修改持續時間只能縮短、冷卻 20 分｜📌 剩餘 10 分內且無人排隊可手動延長")
 
 room, queue = state["room"], state["queue"]
 
@@ -257,7 +257,7 @@ with st.sidebar:
         baha = st.text_input("巴哈ID（必填其一）")
         game = st.text_input("遊戲ID（必填其一）")
         pw = st.text_input("4位密碼（退出時必須相同）", max_chars=4, type="password")
-        st.caption("ID 以外的欄位皆可任意填，填 0 / 不選 = 不顯示")
+        st.caption("一般玩家所有欄位都要填（沒填會跳警告）；特別名單只需 ID＋密碼")
         score = st.number_input("隊伍分數", min_value=0, value=0)
         fire = st.number_input("火消耗", min_value=0, value=0)
         pref_t = st.time_input("指定時間", value=None, disabled=(when == "現在馬上排"))
@@ -281,32 +281,49 @@ with st.sidebar:
                 st.error(f"「{dup}」已經在房間或排隊中，不要重複排")
             else:
                 prio = resolve_prio(baha, game)
-                start_pref = None
-                if when != "現在馬上排" and pref_t is not None:
-                    cand = now.replace(hour=pref_t.hour, minute=pref_t.minute,
-                                       second=0, microsecond=0)
-                    if cand < now:
-                        cand += timedelta(days=1)
-                    if prio >= 3 and cand > now + MAX_AHEAD:   # 提前2小時只限一般玩家
-                        st.error("最多只能提前 2 小時預約！")
+                missing = []
+                if prio >= 3:                        # 一般玩家：所有欄位必填
+                    if not baha:
+                        missing.append("巴哈ID")
+                    if not game:
+                        missing.append("遊戲ID")
+                    if not score:
+                        missing.append("隊伍分數")
+                    if not fire:
+                        missing.append("火消耗")
+                    if when != "現在馬上排" and pref_t is None:
+                        missing.append("指定時間")
+                    if dur is None:
+                        missing.append("持續時間")
+                if missing:
+                    st.error("欄位沒填完：" + "、".join(missing))
+                else:
+                    start_pref = None
+                    if when != "現在馬上排" and pref_t is not None:
+                        cand = now.replace(hour=pref_t.hour, minute=pref_t.minute,
+                                           second=0, microsecond=0)
+                        if cand < now:
+                            cand += timedelta(days=1)
+                        if prio >= 3 and cand > now + MAX_AHEAD:   # 提前2小時只限一般玩家
+                            st.error("最多只能提前 2 小時預約！")
+                            st.stop()
+                        start_pref = cand.isoformat()
+                    duration = dur
+                    if duration is not None and prio >= 3 and duration > 60:
+                        st.error("一般玩家持續時間上限 60 分鐘！")
                         st.stop()
-                    start_pref = cand.isoformat()
-                duration = dur
-                if duration is not None and prio >= 3 and duration > 60:
-                    st.error("一般玩家持續時間上限 60 分鐘！")
-                    st.stop()
-                queue.append({
-                    "baha_id": baha, "game_id": game, "prio": prio,
-                    "score": score or None,       # 0 = 沒填 → 不顯示
-                    "fire": fire or None,
-                    "pw_hash": _sha(pw),
-                    "start_pref": start_pref,
-                    "duration": duration,
-                    "reg_at": now.isoformat(),
-                })
-                queue.sort(key=_qkey)
-                dirty = True
-                st.toast("已加入排隊！")
+                    queue.append({
+                        "baha_id": baha, "game_id": game, "prio": prio,
+                        "score": score or None,       # 0 = 沒填 → 不顯示
+                        "fire": fire or None,
+                        "pw_hash": _sha(pw),
+                        "start_pref": start_pref,
+                        "duration": duration,
+                        "reg_at": now.isoformat(),
+                    })
+                    queue.sort(key=_qkey)
+                    dirty = True
+                    st.toast("已加入排隊！")
 
     st.markdown("---")
     st.header("🚪 退出")
@@ -351,6 +368,89 @@ with st.sidebar:
         if c2.button("取消"):
             del st.session_state["exit_pending"]
             st.rerun()
+
+    # ---------- 修改 / 延長 ----------
+    st.markdown("---")
+    st.header("✏️ 修改 / 延長")
+    mid = st.text_input("輸入你的巴哈ID或遊戲ID", key="mod_id")
+    mpw = st.text_input("你的4位密碼", max_chars=4, type="password", key="mod_pw")
+
+    mi = _find(room, mid)
+    m_src, m_target = ("room", room[mi]) if mi is not None else (None, None)
+    if m_target is None:
+        mj = _find(queue, mid)
+        if mj is not None:
+            m_src, m_target = "queue", queue[mj]
+
+    if mid.strip():
+        if m_target is None:
+            st.caption("找不到這個 ID")
+        elif m_src == "room" and m_target.get("until") is None:
+            st.caption("🔒 鎖定成員，沒有持續時間")
+        elif m_src == "room":
+            rem = int((parse(m_target["until"]) - now).total_seconds() // 60)
+            st.caption(f"已在房間，剩餘 {rem} 分鐘｜排隊 {len(queue)} 人")
+        else:
+            st.caption(f"已在排隊，持續 {m_target.get('duration') or 60} 分鐘")
+
+    ndur = st.number_input("縮短後的持續時間（分鐘）", min_value=10, value=None, key="mod_dur")
+    if st.button("修改（只能縮短，冷卻 20 分）", key="mod_go", use_container_width=True):
+        is_admin = st.session_state.get("admin", False)
+        if m_target is None:
+            st.error("找不到這個 ID")
+        elif not _pw_ok(m_target, mpw, is_admin):
+            st.error("密碼不符合")
+        else:
+            le = m_target.get("last_edit")
+            if le and now - parse(le) < timedelta(minutes=20):
+                wait = 20 - int((now - parse(le)).total_seconds() // 60)
+                st.error(f"修改冷卻中，請 {wait} 分鐘後再試")
+            elif ndur is None:
+                st.error("請填要縮短到的分鐘數")
+            elif m_src == "room":
+                if m_target.get("until") is None:
+                    st.error("🔒 鎖定成員沒有持續時間")
+                elif now + timedelta(minutes=ndur) >= parse(m_target["until"]):
+                    st.error("只能縮短：要比目前剩餘時間更短")
+                else:
+                    m_target["until"] = (now + timedelta(minutes=ndur)).isoformat()
+                    m_target["last_edit"] = now.isoformat()
+                    dirty = True
+                    st.toast("已縮短剩餘時間")
+                    if save_state(state):
+                        st.rerun()
+            else:
+                if ndur >= (m_target.get("duration") or 60):
+                    st.error("只能縮短：要比目前的持續時間更短")
+                else:
+                    m_target["duration"] = ndur
+                    m_target["last_edit"] = now.isoformat()
+                    dirty = True
+                    st.toast("已縮短持續時間")
+                    if save_state(state):
+                        st.rerun()
+
+    if st.button("延長 1 小時（剩餘 10 分內且無人排隊）", key="ext_go", use_container_width=True):
+        is_admin = st.session_state.get("admin", False)
+        if m_target is None:
+            st.error("找不到這個 ID")
+        elif not _pw_ok(m_target, mpw, is_admin):
+            st.error("密碼不符合")
+        elif m_src != "room" or m_target.get("until") is None:
+            st.error("只有在房間、會換人的成員能延長")
+        else:
+            rem = (parse(m_target["until"]) - now).total_seconds() / 60
+            if rem > 10:
+                st.error(f"要剩餘 10 分鐘內才能延長（現在剩 {int(rem)} 分）")
+            elif len(queue) > 0:
+                st.error("現在有人排隊，不能延長")
+            else:
+                m_target["until"] = (now + timedelta(hours=1)).isoformat()
+                m_target["ext"] = m_target.get("ext", 0) + 1
+                dirty = True
+                st.toast("已延長 1 小時")
+                if save_state(state):
+                    st.rerun()
 
     # ---------- 後門管理面板 ----------
     if st.session_state.get("admin"):
